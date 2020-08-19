@@ -3,7 +3,7 @@ import numpy as np
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 from matplotlib import cm
-import EchoTop_Data_Tools as et
+import Global_Tools as gb
 from mpl_toolkits.mplot3d import axes3d
 from datetime import datetime
 
@@ -17,7 +17,7 @@ rootgrp = Dataset("Data/EchoTop/ciws.EchoTop.20200622T232730Z.nc", "r", format="
 print("Variables:")
 for v in rootgrp.variables:
     print(v)
-
+s
 x0 = rootgrp.variables["x0"]
 y0 = rootgrp.variables["y0"]
 z0 = rootgrp.variables["z0"]
@@ -51,9 +51,9 @@ plt.close()
 
 
 # Create Basemap, plot on Latitude/Longitude scale
-m = Basemap(width=12000000, height=9000000, rsphere=et.R_EARTH, \
-            resolution='l', area_thresh=1000., projection='lcc',\
-            lat_0=et.LAT_ORIGIN, lon_0=et.LONG_ORIGIN)
+m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH, \
+            resolution='l', area_thresh=1000., projection='lcc', \
+            lat_0=gb.LAT_ORIGIN, lon_0=gb.LONG_ORIGIN)
 m.drawcoastlines()
 
 
@@ -72,7 +72,7 @@ fig2 = plt.gca()
 # xlat,ylong: equivalent lat/long values
 
 #TODO: try using LatLon objects
-ylat, xlong = et.relToLatLong(x0[:], y0[:], et.LAT_ORIGIN, et.LONG_ORIGIN, et.R_EARTH)
+ylat, xlong = gb.rel_to_latlong(x0[:], y0[:], gb.LAT_ORIGIN, gb.LONG_ORIGIN, gb.R_EARTH)
 xlongm, ylatm = np.meshgrid(xlong, ylat)
 
 

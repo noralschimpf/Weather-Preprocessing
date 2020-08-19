@@ -4,8 +4,7 @@ os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessin
 """
 Read Flight Track-Point Files and Plot in Basemap
 """
-#TODO: GLOBAL VARS/FUNCTIONS FILE
-PATH_PROJECT = os.path.abspath('.')
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,28 +13,21 @@ from mpl_toolkits.basemap import Basemap, addcyclic
 from scipy.ndimage.filters import minimum_filter, maximum_filter
 from matplotlib import dates, cm
 from netCDF4 import Dataset, num2date
-import EchoTop_Data_Tools as et
+import Global_Tools as gb
 
 
 
 
 
-def extrema(mat, mode='wrap', window=10):
-    """find the indices of local extrema (min and max)
-    in the input array."""
-    mn = minimum_filter(mat, size=window, mode=mode)
-    mx = maximum_filter(mat, size=window, mode=mode)
-    # (mat == mx) true if pixel is equal to the local max
-    # (mat == mn) true if pixel is equal to the local in
-    # Return the indices of the maxima, minima
-    return np.nonzero(mat == mn), np.nonzero(mat == mx)
+
+
 
 
 
 # create Basemap instance.
 m = Basemap(projection='merc', llcrnrlat=24., urcrnrlat=50., \
             llcrnrlon=-123., urcrnrlon=-67., resolution='c', \
-            rsphere=et.R_EARTH, lat_0=40., lon_0=-98., lat_ts=20.)
+            rsphere=gb.R_EARTH, lat_0=40., lon_0=-98., lat_ts=20.)
 
 # draw boundary, fill continents, draw costlines, draw parrallels, draw meridians
 m.drawmapboundary()
@@ -48,7 +40,7 @@ m.drawmeridians(np.arange(-160, -50, 10), labels=[0, 0, 0, 1])
 
 # Open, plot, and downsample each flight-track CSV
 os.chdir('data/IFF_Track_Points')
-selected_files = [x for x in os.listdir() if x.__contains__('.txt')]
+selected_files = [x for x in os.listdir() if x.__contains__('_trk.txt')]
 for file in selected_files:
     data = np.loadtxt(file, delimiter=',', usecols=(1, 2, 3, 4))
     print(data[0:10])
@@ -85,7 +77,7 @@ for file in selected_files:
     m.contour(lonsm, latsm, altsm, latlon=True, cmap=cm.coolwarm)
 
     # Place Flight Track in Appropriate Date Folder
-    PATH_TO_SORTED_TRACKPOINTS = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
+    PATH_TO_SORTED_TRACKPOINTS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
     str_current_date = timestamps[0].isoformat()[:10]
     if(not (os.listdir(PATH_TO_SORTED_TRACKPOINTS).__contains__(str_current_date))):
         os.mkdir(PATH_TO_SORTED_TRACKPOINTS + str_current_date)
@@ -93,7 +85,7 @@ for file in selected_files:
     os.rename(file, PATH_START_DATE)
 
 # Return to Project Directory
-os.chdir(PATH_PROJECT)
+os.chdir(gb.PATH_PROJECT)
 
 
 
