@@ -22,7 +22,7 @@ for dir in ['IFF_Track_Points']: #'IFF_Flight_Plans'
             data_frame = pd.read_csv(file)
             data = data_frame.values[:]
             for i in range(0, len(data[:,0])):
-                data[i][0] = gb.to_unicode(data[i][0])
+                data[i][0] = gb.str_to_unicode(data[i][0])
             data = np.delete(data,[5,6],1)
             np.savetxt(file + '.modified', data, delimiter=',', fmt='%s')
 

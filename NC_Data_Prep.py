@@ -82,9 +82,9 @@ for file in nc_files:
       x0,y0: meters from lat:38 long:-90
       xlat,ylong: equivalent lat/long values
     '''
-    y_lat, x_long = gb.rel_to_latlong(x0[:], y0[:], gb.LAT_ORIGIN, gb.LONG_ORIGIN, gb.R_EARTH)
-    x_long_mesh, y_lat_mesh = np.meshgrid(x_long, y_lat)
-    rootgrp_sorted.variables['x0'] = x_long
+    y_lat, x_lon = gb.rel_to_latlong(x0[:], y0[:], gb.LAT_ORIGIN, gb.LONG_ORIGIN, gb.R_EARTH)
+    x_long_mesh, y_lat_mesh = np.meshgrid(x_lon, y_lat)
+    rootgrp_sorted.variables['x0'] = x_lon
     rootgrp_sorted.variables['y0'] = y_lat
 
 
@@ -92,7 +92,7 @@ for file in nc_files:
     color_levels = np.arange(-1e3, 10e3, 1e3)
     ET_Lambert_Contour = m.contourf(x_long_mesh, y_lat_mesh, echotop[0][0], color_levels, latlon=True, cmap=cm.coolwarm)
     m.colorbar(ET_Lambert_Contour, location='right', pad='5%')
-    plt.show(block=False)
+    plt.show(block=True)
     PATH_FIGURE_PROJECTION = gb.PATH_PROJECT + '/Output/EchoTop_Projected/' \
                              + dates[0].isoformat().replace(':', '_') + '.' + gb.FIGURE_FORMAT
     plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)

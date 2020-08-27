@@ -4,7 +4,7 @@ import os, re
 
 # Global Constants, specc'd by SHERLOC
 LAT_ORIGIN = 38.
-LONG_ORIGIN = -90.
+LONG_ORIGIN = -98.
 R_EARTH = 6370997
 
 # Path / Project Vars
@@ -40,7 +40,7 @@ alg reference: https://www.movable-type.co.uk/scripts/latlong.html
 '''
 
 
-def heading_a_to_b(a_lon, a_lat, b_lon, b_lat, spherical=False):
+def heading_a_to_b(a_lon, a_lat, b_lon, b_lat, spherical=True):
     if spherical:
         x = (math.cos(b_lat) * math.sin(a_lat)) - (math.sin(b_lat) * math.cos(a_lat) * math.cos(a_lon - b_lon))
         y = math.sin(a_lon - b_lon) * math.cos(a_lat)
@@ -70,18 +70,23 @@ def extrema(mat, mode='wrap', window=10):
 
 
 '''
-converts each character to its unicode-equivalent
-returns as string
+convert between Strings and their unicode-lists
 '''
 
 
-def to_unicode(string_in):
+def str_to_unicode(string_in):
     string_temp = ''
     for char in string_in:
-        string_temp = string_temp + str(ord(char))
+        str_dig = str(ord(char))
+        str_temp = str_temp + str_dig.zfill(4-len(str_dig))
     return str(string_temp)
 
-
+def unicode_to_str(unicode_in):
+    str_unicode = str(unicode_in)
+    str_temp = ''
+    for i in range(0,len(str_unicode)%4):
+        str_temp = str_temp + chr(str_unicode[i:i+3])
+    return str(str_temp)
 '''
 Returns searchable NavAid and Waypoint callsigns for OpenNav
 DELETES headings
@@ -116,14 +121,13 @@ Call from within iterator (for file in os.listdir():)
 
 
 # TODO: Append/replace file if existing
-def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, filename, bool_delete=False, bool_append=False):
-    PATH_TO_SORTED_DATA = PATH_TO_DATA_DIR + '/Sorted/'
+def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, filename, bool_delete_original=False, bool_append=False):
     str_current_date = datetime_obj.isoformat()[:10]
-    if not (os.listdir(PATH_TO_SORTED_DATA).__contains__(str_current_date)):
-        os.mkdir(PATH_TO_SORTED_DATA + str_current_date)
-    PATH_START_DATE = PATH_TO_SORTED_DATA + str_current_date + '/' + filename
+    if not (os.listdir(PATH_TO_DATA_DIR).__contains__(str_current_date)):
+        os.mkdir(PATH_TO_DATA_DIR + str_current_date)
+    PATH_START_DATE = PATH_TO_DATA_DIR + str_current_date + '/' + filename
     np.savetxt(PATH_START_DATE, data_to_save, delimiter=',', fmt='%s')
-    if bool_delete:
+    if bool_delete_original:
         os.remove(filename)
 
 

@@ -46,10 +46,10 @@ for file in selected_files:
     print(data[0:10])
 
     # read lats,lons,alts.
+    times = data[:, 0]
     lats = data[:, 1]
     lons = data[:, 2]
     alts = data[:, 3]
-    times = data[:, 0]
     print('Latitude:', lats[0:10])
     print('Longitude:', lons[0:10])
     print('Altitude:', alts[0:10])
@@ -76,9 +76,11 @@ for file in selected_files:
 
     m.contour(lonsm, latsm, altsm, latlon=True, cmap=cm.coolwarm)
 
-    gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, timestamps[0], data, file, True)
-    ''' Place Flight Track in Appropriate Date Folder
     PATH_TO_SORTED_TRACKPOINTS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
+    gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, timestamps[0], data, file, True)
+
+
+    ''' Place Flight Track in Appropriate Date Folder
     str_current_date = timestamps[0].isoformat()[:10]
     if(not (os.listdir(PATH_TO_SORTED_TRACKPOINTS).__contains__(str_current_date))):
         os.mkdir(PATH_TO_SORTED_TRACKPOINTS + str_current_date)
