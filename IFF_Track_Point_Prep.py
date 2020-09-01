@@ -43,13 +43,15 @@ os.chdir('data/IFF_Track_Points')
 selected_files = [x for x in os.listdir() if x.__contains__('_trk.txt')]
 for file in selected_files:
     data = np.loadtxt(file, delimiter=',', usecols=(1, 2, 3, 4))
-    print(data[0:10])
+    data_slicing_incr = int(np.floor(len(data) / gb.TARGET_SAMPLE_SIZE))
+    data_sliced = data[::data_slicing_incr]
+    print(data_sliced[0:10])
 
     # read lats,lons,alts.
-    times = data[:, 0]
-    lats = data[:, 1]
-    lons = data[:, 2]
-    alts = data[:, 3]
+    times = data_sliced[:, 0]
+    lats = data_sliced[:, 1]
+    lons = data_sliced[:, 2]
+    alts = data_sliced[:, 3]
     print('Latitude:', lats[0:10])
     print('Longitude:', lons[0:10])
     print('Altitude:', alts[0:10])
@@ -77,7 +79,7 @@ for file in selected_files:
     m.contour(lonsm, latsm, altsm, latlon=True, cmap=cm.coolwarm)
 
     PATH_TO_SORTED_TRACKPOINTS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
-    gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, timestamps[0], data, file, True)
+    gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, timestamps[0], data_sliced, file, True)
 
 
     ''' Place Flight Track in Appropriate Date Folder
@@ -87,6 +89,8 @@ for file in selected_files:
     PATH_START_DATE = PATH_TO_SORTED_TRACKPOINTS + str_current_date + '/' + file
     os.rename(file, PATH_START_DATE)'''
 
+
+
 # Return to Project Directory
 os.chdir(gb.PATH_PROJECT)
 
@@ -94,7 +98,7 @@ os.chdir(gb.PATH_PROJECT)
 
 # plot show
 plt.title('JFK-LAX Flights, Mercator Projection')
-m.colorbar(mappable=None, location='right', size='5%', pad='1%')
+#m.colorbar(mappable=None, location='right', size='5%', pad='1%')
 plt.show(block=False)
 plt.savefig("Output/IFF_Flight_Track.png", format='png')
 plt.close()

@@ -12,6 +12,7 @@ PATH_ECHOTOP_RAW = gb.PATH_PROJECT + '/Data/EchoTop/'
 os.chdir(PATH_ECHOTOP_RAW)
 nc_files = [x for x in os.listdir() if x.__contains__('.nc')]
 
+file_count = 0
 for file in nc_files:
     rootgrp_orig = Dataset(file, "r", format="netCDF4")
 
@@ -44,23 +45,8 @@ for file in nc_files:
             v.set_auto_mask(False)
             v = v[::]
 
-
-
     '''
-    Plot EchoTop Readings, Raw
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    xm,ym = np.meshgrid(x0, y0)
-    surf = ax.plot_surface(xm, ym, echotop[0][0], cmap=cm.coolwarm)
-    plt.title("EchoTops for " + time.string)
-    ax.view_init(elev=90,azim=-90)
-    fig.colorbar(surf, shrink=0.5, aspect=5)
-    plt.show(block=False)
-    plt.savefig("Output/EchoTop_Raw.png", format='png')
-    plt.close()
-    '''
-
-
+    PLOT_ONLY:
     # Create Basemap, plot on Latitude/Longitude scale
     m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
                 resolution='l', area_thresh=1000., projection='lcc',
@@ -76,6 +62,7 @@ for file in nc_files:
     m.drawparallels(Parallels, labels=[False, True, True, False])
     m.drawmeridians(Meridians, labels=[True, False, False, True])
     fig2 = plt.gca()
+    '''
 
     '''
     Map EchoTop x,y to Lambert Conformal Projection
@@ -83,20 +70,23 @@ for file in nc_files:
       xlat,ylong: equivalent lat/long values
     '''
     y_lat, x_lon = gb.rel_to_latlong(x0[:], y0[:], gb.LAT_ORIGIN, gb.LONG_ORIGIN, gb.R_EARTH)
-    x_long_mesh, y_lat_mesh = np.meshgrid(x_lon, y_lat)
-    rootgrp_sorted.variables['x0'] = x_lon
-    rootgrp_sorted.variables['y0'] = y_lat
+    #PLOT_ONLY:x_long_mesh, y_lat_mesh = np.meshgrid(x_lon, y_lat)
+    rootgrp_sorted.variables['x0'][:] = x_lon
+    rootgrp_sorted.variables['y0'][:] = y_lat
 
-
+    '''
+    PLOT_ONLY:
     # Define filled contour levels and plot
     color_levels = np.arange(-1e3, 10e3, 1e3)
     ET_Lambert_Contour = m.contourf(x_long_mesh, y_lat_mesh, echotop[0][0], color_levels, latlon=True, cmap=cm.coolwarm)
     m.colorbar(ET_Lambert_Contour, location='right', pad='5%')
-    plt.show(block=True)
+    plt.show(block=False)
     PATH_FIGURE_PROJECTION = gb.PATH_PROJECT + '/Output/EchoTop_Projected/' \
                              + dates[0].isoformat().replace(':', '_') + '.' + gb.FIGURE_FORMAT
     plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)
     plt.close()
-
+    '''
 
     rootgrp_sorted.close()
+    file_count += 1
+    print('converted:\t', file_count, ' of ', len(nc_files))
