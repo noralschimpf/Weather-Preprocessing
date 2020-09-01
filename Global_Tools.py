@@ -107,6 +107,37 @@ def clean_waypoints(split_waypoints):
     temp_waypoints = [x for x in temp_waypoints if len(x) > 1]
     return temp_waypoints
 
+'''
+Returns an array of numbers parsed from a string
+any length of non-numeric characters ('.' excluded) is a delimiter
+'''
+
+def parse_coords_from_str(str_in):
+    arr_coords = np.zeros((3,), dtype=np.float)
+    str_in_split = str_in.split(' ')
+    char_sign = str_in_split[3]
+    sign = 1
+    if(char_sign == 'W' or char_sign == 'S'):
+        sign = -1
+
+    for item in range(len(str_in_split)):
+        str_in_split[item] = str_in_split[item][:-1]
+        if(item < 3):
+            arr_coords[item] = sign*float(str_in_split[item])
+
+    return arr_coords
+
+
+'''
+Converts an array [Degrees, Minutes, Seconds] into a single float degree
+'''
+def DegMinSec_to_Degree(arr_DegMinSec):
+    degrees = float(arr_DegMinSec[0])
+    degrees += arr_DegMinSec[1]/60.
+    degrees += arr_DegMinSec[2]/3600.
+    return degrees
+
+
 
 '''
 Sorts data into subdirectories by date
@@ -130,8 +161,3 @@ def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, filename, boo
     np.savetxt(PATH_START_DATE, data_to_save, delimiter=',', fmt='%s')
     if bool_delete_original:
         os.remove(filename)
-
-
-
-# TODO: Downsample track points
-# def downsample(arr, size=2000):

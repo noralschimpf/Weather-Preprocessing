@@ -28,8 +28,6 @@ for file in nc_files:
 
     rootgrp_sorted = Dataset(str_sorted_file, 'r+', format="netCDF4")
 
-    #TODO: Concatenate EchoTop Data by Day
-
     x0 = rootgrp_sorted.variables["x0"]
     y0 = rootgrp_sorted.variables["y0"]
     z0 = rootgrp_sorted.variables["z0"]
