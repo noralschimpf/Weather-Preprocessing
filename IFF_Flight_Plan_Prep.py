@@ -97,25 +97,30 @@ for file in Flight_Plan_Files:
         print(waypoints[i], '\t', str(lat), '\t', str(lon), '\t', str(alt))
 
     # Waypoint Linear Interpolation
-    slice_size = int(np.ceil(gb.TARGET_SAMPLE_SIZE / len(waypoints)))
-    sample_size = slice_size*len(waypoints)
+    slice_size = int(np.ceil(gb.TARGET_SAMPLE_SIZE / (len(waypoints)-1)))
+    sample_size = slice_size*(len(waypoints)-1)
 
     lat_coord = np.zeros((sample_size,), dtype=np.float)
     lon_coord = np.zeros((sample_size,), dtype=np.float)
     alt_coord = np.zeros((sample_size,), dtype=np.float)
     time_coord = np.zeros((sample_size,), dtype=np.float)
 
-    for i in range(0, len(waypoints)):
-        lat_coord[slice_size*i:slice_size*(i+1)] = np.linspace(lat_waypoints[i-1], lat_waypoints[i], slice_size)
-        lon_coord[slice_size*i:slice_size*(i+1)] = np.linspace(lon_waypoints[i-1], lon_waypoints[i], slice_size)
-        alt_coord[slice_size*i:slice_size*(i+1)] = np.linspace(alt_waypoints[i-1], alt_waypoints[i], slice_size)
-        time_coord[slice_size*i:slice_size*(i+1)] = np.linspace(time_waypoints[i-1], time_waypoints[i], slice_size)
-    #TODO: Address redundant entries without deleting array (rework linspace calls)
     for i in range(1, len(waypoints)):
-        lat_coord = np.delete(lat_coord, (slice_size-1)*i)
-        lon_coord = np.delete(lon_coord, slice_size*i)
-        alt_coord = np.delete(alt_coord, slice_size*i)
-        time_coord = np.delete(time_coord, slice_size*i)
+        if(i<len(waypoints)-1):
+            lon_coord[(i - 1)*slice_size:i*slice_size] = np.linspace(lon_waypoints[i-1], lon_waypoints[i],
+                                                                    slice_size, endpoint=False)
+            lat_coord[(i-1)*slice_size:i*slice_size] = np.linspace(lat_waypoints[i-1], lat_waypoints[i],
+                                                                         slice_size, endpoint=False)
+            alt_coord[(i-1)*slice_size:i*slice_size] = np.linspace(alt_waypoints[i-1], alt_waypoints[i],
+                                                                         slice_size, endpoint=False)
+        else:
+            lon_coord[(i-1)*slice_size:i*slice_size] = np.linspace(lon_waypoints[i-1], lon_waypoints[i],
+                                                                   slice_size, endpoint=True)
+            lat_coord[(i-1)*slice_size:i*slice_size] = np.linspace(lat_waypoints[i - 1], lat_waypoints[i],
+                                                                         slice_size, endpoint=True)
+            alt_coord[(i-1)*slice_size:i*slice_size] = np.linspace(alt_waypoints[i - 1], alt_waypoints[i],
+                                                                         slice_size, endpoint=True)
+
 
     # Get Datetime Object of last filed entry
     # TODO: Get Datetime for Departure
@@ -138,7 +143,7 @@ for file in Flight_Plan_Files:
     m.drawmeridians(Meridians, labels=[True, False, False, True])
     fig = plt.gca()
 
-    m.scatter(lon_coord, lat_coord, marker=',', color='red', latlon=True, )
+    m.scatter(lon_coord, lat_coord, marker='.', color='red', latlon=True, )
     m.plot(lon_waypoints, lat_waypoints, marker='.', color='blue', latlon=True)
     plt.show(block=False)
     PATH_FLIGHT_PLAN_FIGS = gb.PATH_PROJECT + '/Output/Flight Plans/Plots/' + file[:-3] + gb.FIGURE_FORMAT
