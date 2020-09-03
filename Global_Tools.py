@@ -103,7 +103,8 @@ def clean_waypoints(split_waypoints):
         digit_substr = re.findall('[^a-zA-Z]+', temp_waypoints[i])
         if (len(digit_substr) != 0):
             digit_start = temp_waypoints[i].find(digit_substr[0])
-            temp_waypoints[i] = temp_waypoints[i][:digit_start]
+            if (digit_start >2 or digit_start<=1):
+                temp_waypoints[i] = temp_waypoints[i][:digit_start]
     temp_waypoints = [x for x in temp_waypoints if len(x) > 1]
     return temp_waypoints
 

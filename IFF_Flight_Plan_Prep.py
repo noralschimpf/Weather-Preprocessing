@@ -26,17 +26,37 @@ for file in Flight_Plan_Files:
     # filter for FP entries containing a Waypoint AND Timestamp
     filter_slice1 = np.where((data[:,3] == 'Unknown'))
     filter_slice2 = np.where(data[:, 2] == 'Unknown')
-    filtered_data = np.delete(data, np.append(filter_slice1, filter_slice2), axis=0)
+    filter_slice3 = np.where(pd.isnull(data[:,3]))
+    filter = np.append(filter_slice1, filter_slice2)
+    filter = np.append(filter, filter_slice3)
+    filtered_data = np.delete(data, filter, axis=0)
 
 
     # Select the last Complete FP entry
     index_last_filed = np.where(filtered_data[:, 2] == np.max(filtered_data[:, 2]))
+    index_first_filed = np.where(filtered_data[:, 2] == np.min(filtered_data[:, 2]))
     last_filed_entry = filtered_data[index_last_filed][0]
+    first_filed_entry = filtered_data[index_first_filed][0]
 
 
-    #Parse Airport, Waypoint, NavAid codes
-    waypoints = last_filed_entry[3].split('.', 100)
-    waypoints = gb.clean_waypoints(waypoints)
+
+    str_waypoints = first_filed_entry[3]
+    waypoints = gb.clean_waypoints(str_waypoints.split('.',100))
+
+    '''
+    # Concatenate and Parse Airport, Waypoint, NavAid codes
+    str_all_waypoints = filtered_data[:,3]
+    for entry in range(len(str_all_waypoints)):
+        unique_entry = False
+        entry_waypoints = str_all_waypoints[entry].split('.', 100)
+        entry_waypoints = gb.clean_waypoints(entry_waypoints)
+        for wpt in range(len(entry_waypoints)):
+            if(not waypoints.__contains__(entry_waypoints[wpt])):
+                waypoints.append(entry_waypoints[wpt])
+                unique_entry = True
+        if(unique_entry):
+            print(entry_waypoints)
+    '''
     print(waypoints)
 
 
@@ -130,6 +150,7 @@ for file in Flight_Plan_Files:
     data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T
     gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', filed_date, data, file)
 
+    '''
     # Plot Flight Plan to Verify using Basemap
     m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
                 resolution='l', area_thresh=1000., projection='lcc',
@@ -144,14 +165,14 @@ for file in Flight_Plan_Files:
     fig = plt.gca()
 
     m.scatter(lon_coord, lat_coord, marker='.', color='red', latlon=True, )
+    #lbl_x, lbl_y  = m(lon_waypoints, lat_waypoints)
+    #for i in range(len(waypoints)):
+    #    plt.annotate(waypoints[i], (lbl_x[i], lbl_y[i]))
     m.plot(lon_waypoints, lat_waypoints, marker='.', color='blue', latlon=True)
     plt.show(block=False)
     PATH_FLIGHT_PLAN_FIGS = gb.PATH_PROJECT + '/Output/Flight Plans/Plots/' + file[:-3] + gb.FIGURE_FORMAT
-    plt.savefig(PATH_FLIGHT_PLAN_FIGS, dpi=200)
+    plt.savefig(PATH_FLIGHT_PLAN_FIGS, dpi=300)
     plt.close()
+    '''
 
     print(file, ' read')
-
-
-
-
