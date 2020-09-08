@@ -144,7 +144,7 @@ for file in Flight_Plan_Files:
 
     # Get Datetime Object of last filed entry
     # TODO: Get Datetime for Departure
-    filed_time = last_filed_entry[2]
+    filed_time = np.float64(first_filed_entry[2])
     filed_date = num2date(filed_time, units='Seconds since 1970-01-01T00:00:00Z', calendar='gregorian')
 
     data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T

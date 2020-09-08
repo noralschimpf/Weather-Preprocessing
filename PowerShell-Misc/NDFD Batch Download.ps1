@@ -1,12 +1,32 @@
 ﻿# batch download reported top-of-the-hour data given an archived date
 # Filtering Metadata based on
 #   https://www.weather.gov/media/mdl/ndfd/NDFDelem_fullres_201906.xls
+workflow batch-download
+{
+    Param(
+        [Parameter(Mandatory=$TRUE)]
+        [String[]] $list_download_paths,
+        [Parameter(Mandatory=$TRUE)]
+        [String[]] $list_Output_Paths)
+
+        $iterator_arr = @(1..$list_download_paths.Count)
+
+        foreach -parallel -throttlelimit 4 ($i in $iterator_arr)
+        {    
+            if( -Not $list_download_paths[$i] -eq $null){
+                echo('Saving:\t' + $list_download_paths[$i] + ' to\t' + $list_Output_Paths[$i])
+                Invoke-WebRequest $list_download_paths[$i] -Outfile $list_Output_Paths[$i] -ErrorAction Inquire
+                echo("Codes: " + $LASTEXITCODE)
+            }   
+        }
+}
+
 
 
 
 #TODO: Set as Function Variables
 
-$STR_DOWNLOAD_DAY = '2018-11-01'
+$STR_DOWNLOAD_DAY = '2019-06-10'
 $BATCH_ONLY = $TRUE
 
 
@@ -18,12 +38,16 @@ $LINK_BASE = 'https://www.ncei.noaa.gov/data/national-digital-forecast-database/
 $degrib = 'C:\ndfd\degrib\bin\degrib.exe'
 
 
+$paths_working = @($PATH_OUTPUT_LOCATION,$PATH_DOWNLOADED_WINDDIR,$PATH_DOWNLOADED_WINDSPD,$PATH_OUTPUT_BATCHED)
+
+$starttime = Get-Date
 # Initialize Workspace
-foreach($p in $PATH_OUTPUT_LOCATION,$PATH_DOWNLOADED_WINDDIR,$PATH_DOWNLOADED_WINDSPD,$PATH_OUTPUT_BATCHED){
+foreach($p in $paths_working){
     if (-Not $(Test-Path -Path ($p))){
         mkdir -Path $p
     }
 }
+"Directories Built"
 
 #Set File Arguments
 #Link Format Ex:
@@ -41,14 +65,15 @@ $PREFIX_MEASUREMENTS = $PREFIX_WINDDIRS_CONUS + $PREFIX_WINDSPDS_CONUS
 
 
 #Query indexing page for dayof and day prior files
-$regex = list-to-regex($PREFIX_MEASUREMENTS)
-
+"Setup Query 1/2"
 $page_day_prior = Invoke-WebRequest $LINK_DAY_PRIOR
+echo("Code: " + $LASTEXITCODE + " is " + $LASTEXITCODE.Equals(0))
 $page_files = $page_day_prior.Links | foreach {$_.href}
 $filtered_files = @($page_files) -match $(list-to-regex($PREFIX_MEASUREMENTS))
 
-
+"Setup Query 2/2"
 $page_day_of = Invoke-WebRequest $LINK_DAY
+echo("Code: " + $LASTEXITCODE + " is " + $LASTEXITCODE.Equals(0))
 $page_files = $page_day_of.Links | foreach{$_.href}
 $filtered_files = $filtered_files + @($page_files) -match $(list-to-regex($PREFIX_MEASUREMENTS))
 
@@ -68,6 +93,8 @@ $filtered_files = $filtered_files + @($page_files) -match $(list-to-regex($PREFI
     
 
         $hours = @(0..23)
+        $links_batch_download = @()
+        $paths_output_file = @()
  #       foreach -Parallel -throttlelimit 1 ($hour in $hours)
         foreach ($hour in $hours)
         {
@@ -91,10 +118,11 @@ $filtered_files = $filtered_files + @($page_files) -match $(list-to-regex($PREFI
             if($comp_windspds.count.Equals(0)) {$PATH_OUTPUT_FILE = $PATH_DOWNLOADED_WINDSPD + $relevant_files[$idx_closest_file]}
 
             $LINK_FILE_TO_DOWNLOAD = $LINK_BASE + $relevant_datetimes[$idx_closest_file].toString('yyyyMM') + '/' + $relevant_datetimes[$idx_closest_file].toString('yyyyMMdd') + '/' + $relevant_files[$idx_closest_file]
-
-            Invoke-WebRequest $LINK_FILE_TO_DOWNLOAD -OutFile $PATH_OUTPUT_FILE
-
+            
+            $links_batch_download += $LINK_FILE_TO_DOWNLOAD
+            $paths_output_file += $PATH_OUTPUT_FILE
         }
+        batch-download -list_download_paths $links_batch_download -list_Output_Paths $paths_output_file
     #}
 }
 
@@ -127,9 +155,10 @@ foreach($dir in $dirs)
     #}
     cd ../
 }
-    
 
+$endtime = Get-Date
 
+echo("total runtime" + ($endtime-$starttime).tostring())
 
 
 

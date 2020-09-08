@@ -79,7 +79,7 @@ for file in selected_files:
     m.contour(lonsm, latsm, altsm, latlon=True, cmap=cm.coolwarm)
 
     PATH_TO_SORTED_TRACKPOINTS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
-    gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, timestamps[0], data_sliced, file, True)
+    gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, timestamps[0], data_sliced, file)
 
 
     ''' Place Flight Track in Appropriate Date Folder
