@@ -38,6 +38,18 @@ for file in Flight_Plan_Files:
     last_filed_entry = filtered_data[index_last_filed][0]
     first_filed_entry = filtered_data[index_first_filed][0]
 
+    # Search for track-point file
+    trk_time, trk_lat, trk_lon = None, None, None
+    filed_time = np.float64(first_filed_entry[2])
+    filed_date = num2date(filed_time, units='Seconds since 1970-01-01T00:00:00Z', calendar='gregorian')
+    PATH_TRACK_POINT = gb.PATH_PROJECT + 'Data/Sorted' + filed_date + '/' + file[:-6] + 'trk.txt'
+    if(not os.path.isfile(PATH_TRACK_POINT)):
+        print("WARNING: Track-point file not found; cannot associate timestamps")
+    else:
+        trk_data = np.loadtxt(PATH_TRACK_POINT, delimiter=',', usecols=(0,1,2))
+        trk_time = trk_data[:,0]
+        trk_lat = trk_data[:,1]
+        trk_lon = trk_data[:,2]
 
 
     str_waypoints = first_filed_entry[3]
@@ -105,16 +117,24 @@ for file in Flight_Plan_Files:
         lat_waypoints[i] = lat
         lon_waypoints[i] = lon
 
-        #TODO: Ask Zhe/Li if there is altitude data in flight plans
+        # Assign approx. Flight Altitude
+        # TODO: Identify altitude data in flight plans
         if(alt == 0.):
             alt_waypoints[i] = 35000.
         else:
-            alt_waypoints[i] = 0.
+            alt_waypoints[i] = alt
 
-        #TODO: Ask Zhe/Li if Arrival/Departure times are included in flightplan/summary
+        # Assign Waypoint Time from Track Points
+        if trk_time is not None:
+            idx_lat = np.where(np.abs(lat_waypoints - trk_lat) < .001)
+            idx_lon = np.where(np.abs(lon_waypoints - trk_lon) < .001)
+            idx_time = [x for x in idx_lat if idx_lon.__contains__(x)]
+            time_waypoints[i] = trk_time[idx_time]
+        else:
+            time_waypoints[i] = -1.
 
 
-        print(waypoints[i], '\t', str(lat), '\t', str(lon), '\t', str(alt))
+        print(waypoints[i], '\t', str(lat), '\t', str(lon), '\t', str(alt), '\t', str(time_waypoints[i]))
 
     # Waypoint Linear Interpolation
     slice_size = int(np.ceil(gb.TARGET_SAMPLE_SIZE / (len(waypoints)-1)))
@@ -133,6 +153,8 @@ for file in Flight_Plan_Files:
                                                                          slice_size, endpoint=False)
             alt_coord[(i-1)*slice_size:i*slice_size] = np.linspace(alt_waypoints[i-1], alt_waypoints[i],
                                                                          slice_size, endpoint=False)
+            time_coord[(i-1)*slice_size:i*slice_size] = np.linspace(time_waypoints[i-1], time_waypoints[i],
+                                                                         slice_size, endpoint=False)
         else:
             lon_coord[(i-1)*slice_size:i*slice_size] = np.linspace(lon_waypoints[i-1], lon_waypoints[i],
                                                                    slice_size, endpoint=True)
@@ -140,12 +162,10 @@ for file in Flight_Plan_Files:
                                                                          slice_size, endpoint=True)
             alt_coord[(i-1)*slice_size:i*slice_size] = np.linspace(alt_waypoints[i - 1], alt_waypoints[i],
                                                                          slice_size, endpoint=True)
+            time_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(time_waypoints[i - 1], time_waypoints[i],
+                                                                         slice_size, endpoint=True)
 
 
-    # Get Datetime Object of last filed entry
-    # TODO: Get Datetime for Departure
-    filed_time = np.float64(first_filed_entry[2])
-    filed_date = num2date(filed_time, units='Seconds since 1970-01-01T00:00:00Z', calendar='gregorian')
 
     data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T
     gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', filed_date, data, file)
