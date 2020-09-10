@@ -8,7 +8,7 @@ LONG_ORIGIN = -98.
 R_EARTH = 6370997
 
 # Path / Project Vars
-TARGET_SAMPLE_SIZE = 200
+TARGET_SAMPLE_SIZE = 500
 PATH_PROJECT = os.path.abspath('.')
 SAMPLE_INTV = 1  # seconds between samples
 FIGURE_FORMAT = 'png'
