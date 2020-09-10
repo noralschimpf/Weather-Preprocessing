@@ -196,3 +196,5 @@ for file in Flight_Plan_Files:
     '''
 
     print(file, ' read')
+os.chdir(gb.PATH_PROJECT)
+print('done: ')

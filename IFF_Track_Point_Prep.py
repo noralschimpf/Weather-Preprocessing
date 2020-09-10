@@ -16,15 +16,8 @@ from netCDF4 import Dataset, num2date
 import Global_Tools as gb
 
 
-
-
-
-
-
-
-
-
-# create Basemap instance.
+# create Basemap instance
+'''
 m = Basemap(projection='merc', llcrnrlat=24., urcrnrlat=50., \
             llcrnrlon=-123., urcrnrlon=-67., resolution='c', \
             rsphere=gb.R_EARTH, lat_0=40., lon_0=-98., lat_ts=20.)
@@ -34,14 +27,13 @@ m.drawmapboundary()
 m.drawcoastlines(linewidth=1.25)
 m.drawparallels(np.arange(10, 60, 10), labels=[1, 0, 0, 0])
 m.drawmeridians(np.arange(-160, -50, 10), labels=[0, 0, 0, 1])
-
-# plot 00 UTC today.
-# date = datetime.now().strftime('%Y%m%d')+'00'
+'''
+PATH_TRACK_POINTS = gb.PATH_PROJECT + 'data/IFF_Track_Points/'
 
 # Open, plot, and downsample each flight-track CSV
-os.chdir('data/IFF_Track_Points')
-selected_files = [x for x in os.listdir() if x.__contains__('_trk.txt')]
-for file in selected_files:
+os.chdir(PATH_TRACK_POINTS)
+track_files = [x for x in os.listdir() if x.__contains__('_trk.txt')]
+for file in track_files:
     data = np.loadtxt(file, delimiter=',', usecols=(1, 2, 3, 4))
     data_slicing_incr = int(np.floor(len(data) / gb.TARGET_SAMPLE_SIZE))
     data_sliced = data[::data_slicing_incr]
@@ -52,54 +44,30 @@ for file in selected_files:
     lats = data_sliced[:, 1]
     lons = data_sliced[:, 2]
     alts = data_sliced[:, 3]
-    print('Latitude:', lats[0:10])
-    print('Longitude:', lons[0:10])
-    print('Altitude:', alts[0:10])
-    print('Times:', times[0:10])
-
-    # the window parameter controls the number of highs and lows detected.
-    # (higher value, fewer highs and lows)
-    #local_min, local_max = extrema(alts, mode='wrap', window=50)
-
-    # adjust time
-    # time units: seconds since 1970-01-01T00:00:00Z
-    # time calendar: gregorian
-    unit = "seconds since 1970-01-01T00:00:00"
-    calendar1 = "gregorian"
-    timestamps = num2date(times, units="seconds since 1970-01-01T00:00:00", calendar="gregorian")
-    print('Timestamps:', timestamps[0])
 
     # generate meshgrid to plot contour-map
+    '''
     lonsm, latsm = np.meshgrid(lons, lats)
     altsm = np.zeros(np.shape(latsm))
-
     for i in range(0,len(lats)):
         altsm[i][i] = alts[i]
-
     m.contour(lonsm, latsm, altsm, latlon=True, cmap=cm.coolwarm)
+    '''
 
+    # Sort and Save file by timestamp
+    timestamp = num2date(times[0], units="seconds since 1970-01-01T00:00:00", calendar="gregorian")
     PATH_TO_SORTED_TRACKPOINTS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
     gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, timestamps[0], data_sliced, file)
 
 
-    ''' Place Flight Track in Appropriate Date Folder
-    str_current_date = timestamps[0].isoformat()[:10]
-    if(not (os.listdir(PATH_TO_SORTED_TRACKPOINTS).__contains__(str_current_date))):
-        os.mkdir(PATH_TO_SORTED_TRACKPOINTS + str_current_date)
-    PATH_START_DATE = PATH_TO_SORTED_TRACKPOINTS + str_current_date + '/' + file
-    os.rename(file, PATH_START_DATE)'''
-
-
-
-# Return to Project Directory
-os.chdir(gb.PATH_PROJECT)
-
-
-
 # plot show
+'''
 plt.title('JFK-LAX Flights, Mercator Projection')
 #m.colorbar(mappable=None, location='right', size='5%', pad='1%')
 plt.show(block=False)
 plt.savefig("Output/IFF_Flight_Track.png", format='png')
 plt.close()
+'''
 
+os.chdir(gb.PATH_PROJECT)
+print('done')

@@ -186,6 +186,5 @@ data = np.vstack((weather_cubes_lat, weather_cubes_lon, weather_cubes_et)).T
 FILENAME_CUBEFILE = file.split('.')[0] + '.csv'
 gb.save_csv_by_date(PATH_OUTPUT_CUBES, date, data, FILENAME_CUBEFILE)
 
-#os.chdir(gb.PATH_PROJECT)
+os.chdir(gb.PATH_PROJECT)
 print('done', datetime.datetime.now())
-

@@ -88,3 +88,5 @@ for file in nc_files:
     rootgrp_sorted.close()
     file_count += 1
     print('converted:\t', file_count, ' of ', len(nc_files))
+
+os.chdir(gb.PATH_PROJECT)
