@@ -17,7 +17,7 @@ os.chdir(PATH_FILES_TO_SHIFT)
 files = [x for x in os.listdir() if x.__contains__('.txt')]
 
 for file in files:
-    data = np.loadtxt(file, delimiter=',', usecols=(1, 2, 3, 4))
+    data = np.loadtxt(file, delimiter=',')
 
     times = data[:, 0]
     lats = data[:, 1]
@@ -26,10 +26,14 @@ for file in files:
 
     start_time = num2date(times[0], units='Seconds Since 1970-01-01T00:00:00', calendar='gregorian')
     end_time = num2date(times[-1], units='Seconds Since 1970-01-01T00:00:00', calendar='gregorian')
-    print(start_time, '\n\r', end_time, '\n\n\r')
+    print('ORIGINAL:\t' + start_time.isoformat() + "\t" + end_time.isoformat())
 
     time_diff = start_time - TIME_START_TARGET
     times = times - time_diff.total_seconds()
+
+    start_time = num2date(times[0], units='Seconds Since 1970-01-01T00:00:00', calendar='gregorian')
+    end_time = num2date(times[-1], units='Seconds Since 1970-01-01T00:00:00', calendar='gregorian')
+    print('SHIFTED:\t' + start_time.isoformat() + '\t' + end_time.isoformat())
 
     new_data = np.vstack((times, lats, lons, alts)).T
 
