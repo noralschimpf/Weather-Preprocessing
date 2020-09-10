@@ -1,6 +1,8 @@
 # Weather-Preprocessing
 Preprocessing scripts for CIWS EchoTop Data, following:
->Aircraft Trajectory Prediction using LSTM Neural Network with Embedded Convolutional Layer  Pang, Y., Xu, N., & Liu, Y  https://www.phmpapers.org/index.php/phmconf/article/download/849/phmc_19_849    
+>Aircraft Trajectory Prediction using LSTM Neural Network with Embedded Convolutional Layer  
+>Pang, Y., Xu, N., & Liu, Y    
+>https://www.phmpapers.org/index.php/phmconf/article/download/849/phmc_19_849    
 # Using the Repo
 
 ## Environment
