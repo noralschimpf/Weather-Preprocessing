@@ -66,13 +66,6 @@ for dir in os.listdir():
         # Generate Weather Cubes for 100 samples, testrun
         # TODO: incorporate timestamps, read against multiple netCDF files
 
-        # validation data - from IFF
-        t = np.array([], dtype=float)
-        x = np.array([], dtype=float)
-        y = np.array([], dtype=float)
-        z = np.array([], dtype=float)
-        delta_x = np.array([], dtype=float)
-        delta_y = np.array([], dtype=float)
 
         # Closest-Approximation - From EchoTop
         weather_cubes_time = np.array([], dtype=float)
@@ -85,11 +78,6 @@ for dir in os.listdir():
         print('Data Collection Begin\t', str(datetime.datetime.now()))
         for i in range(START_POS, len(flight_tr[:, ]) - 1):
 
-
-            t = np.append(t, flt_time[i])
-            x = np.append(x, flt_lon[i])
-            y = np.append(y, flt_lat[i])
-            z = np.append(z, flt_alt[i])
 
             # Open EchoTop File Covering the Current Time
             idx_relevant_et = np.argmin(flt_time[i] % et_timestamps)
@@ -107,8 +95,8 @@ for dir in os.listdir():
             theta_ortho = math.radians(heading_ortho - 90)
 
             #find track-point in ET data and calculate point-steps
-            et_x_idx = np.abs(et_lon - x[i-START_POS]).argmin()
-            et_y_idx = np.abs(et_lat - y[i-START_POS]).argmin()
+            et_x_idx = np.abs(et_lon - flt_lon[i]).argmin()
+            et_y_idx = np.abs(et_lat - flt_lat[i-START_POS]).argmin()
 
             #Select nearest-available point to determine step-sizes
             et_x, et_y = et_lon[et_x_idx], et_lat[et_y_idx]
@@ -147,32 +135,22 @@ for dir in os.listdir():
             weather_cube_et = np.zeros((CUBE_SIZE, CUBE_SIZE), dtype=float)
 
             # Vectorized Cube Data Extraction
-            #weather_cube_proj[0] = x + centerline_x + centerline_ortho_x
-            #weather_cube_proj[1] = y + centerline_y + centerline_ortho_y
+            weather_cube_proj[0] = flt_lon[i] + np.tile(centerline_x, (CUBE_SIZE,1)) + np.tile(centerline_ortho_x, (CUBE_SIZE,1)).T
+            weather_cube_proj[1] = flt_lat[i] + np.tile(centerline_y, (CUBE_SIZE,1)) + np.tile(centerline_ortho_y, (CUBE_SIZE,1)).T
 
-            #a = np.arange(CUBE_SIZE)
-            #b = np.arange(CUBE_SIZE)
-            #with np.nditer(a, flags=['external_loop'], op_flags=['readwrite']) as it_x:
-            #    for x in it_x:
-            #        with np.nditer(b, flags=['external_loop'], op_flags=['readwrite']) as it_y:
-            #            for y in it_y:
-            #                et_actual_idx_x = np.abs(et_lon - weather_cube_proj[0][x][y]).argmin()
-
-
-            # Iterative Cube Data Extraction
-            for idx_ in range(0,CUBE_SIZE):
-                for idx_ortho in range(0, CUBE_SIZE):
-                    #Project expected data points using heading and ortho axes
-                    weather_cube_proj[0][idx_][idx_ortho] = x[i-START_POS] + centerline_x[idx_] + centerline_ortho_x[idx_ortho]
-                    weather_cube_proj[1][idx_][idx_ortho] = y[i-START_POS] + centerline_y[idx_] + centerline_ortho_y[idx_ortho]
-
-                    #collect nearest EchoTop points, fill coords with indices
-                    et_actual_idx_x = np.abs(et_lon - weather_cube_proj[0][idx_][idx_ortho]).argmin()
-                    et_actual_idx_y = np.abs(et_lat - weather_cube_proj[1][idx_][idx_ortho]).argmin()
-
-                    weather_cube_actual[0][idx_][idx_ortho] = et_lon[et_actual_idx_x]
-                    weather_cube_actual[1][idx_][idx_ortho] = et_lat[et_actual_idx_y]
-                    weather_cube_et[idx_][idx_ortho] = relevant_et[et_actual_idx_y][et_actual_idx_x]
+            a = np.arange(CUBE_SIZE)
+            b = np.arange(CUBE_SIZE)
+            temp_act = np.zeros((2,CUBE_SIZE,CUBE_SIZE), dtype=float)
+            with np.nditer([weather_cube_proj[0].reshape(1,400), weather_cube_proj[1].reshape(1,400),
+                            weather_cube_actual[0].reshape(1,400), weather_cube_actual[1].reshape(1,400)],
+                           op_flags=[['readonly','no_broadcast'], ['readonly','no_broadcast'],
+                                     ['writeonly'],['writeonly']]) as it:
+                for (proj_x, proj_y, act_x, act_y) in it:
+                    et_actual_idx_x = np.abs(et_lon - proj_x).argmin()
+                    et_actual_idx_y = np.abs(et_lat - proj_y).argmin()
+                    act_x[...] = et_lon[et_actual_idx_x]
+                    act_y[...] = et_lat[et_actual_idx_y]
+                #print(temp_act[:,1,:8])
 
 
 
@@ -204,17 +182,11 @@ for dir in os.listdir():
 
         m.scatter(weather_cubes_lon,weather_cubes_lat,marker=',',color='blue', latlon=True)
         m.scatter(flight_tr[:,2], flight_tr[:,1], marker=',', color='red', latlon=True)
-        #m.quiver(flight_tr[:-1, 2], flight_tr[:-1, 1], flight_tr[1:, 2], flight_tr[1:, 1], latlon=True, minlength=3)
         plt.show(block=False)
         PATH_FIGURE_PROJECTION = gb.PATH_PROJECT + '/Output/Weather Cubes/Plots/' \
                                  + flt_startdate.isoformat().replace(':', '_') + '.' + gb.FIGURE_FORMAT
         plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)
         plt.close()
-
-        # write to csv
-        #data = np.vstack((weather_cubes_lat, weather_cubes_lon, weather_cubes_et)).T
-        #FILENAME_CUBEFILE = file.split('.')[0] + '.csv'
-        #gb.save_csv_by_date(PATH_OUTPUT_CUBES, flt_startdate, data, FILENAME_CUBEFILE)
 
         # reshape and write to NetCDF
         weather_cubes_lat = weather_cubes_lat.reshape(-1, CUBE_SIZE * CUBE_SIZE)
