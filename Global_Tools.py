@@ -4,13 +4,13 @@ import os, re
 
 # Global Constants, specc'd by SHERLOC
 LAT_ORIGIN = 38.
-LONG_ORIGIN = -98.
+LON_ORIGIN = -98.
 R_EARTH = 6370997
+LOOKAHEAD_SECONDS = 200.
 
 # Path / Project Vars
 TARGET_SAMPLE_SIZE = 500
 PATH_PROJECT = os.path.abspath('.')
-SAMPLE_INTV = 1  # seconds between samples
 FIGURE_FORMAT = 'png'
 
 '''

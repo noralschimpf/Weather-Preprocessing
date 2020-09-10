@@ -73,7 +73,7 @@ for dir in dirs:
         for i in range(START_POS, len(flight_tr[:, ]) - 1):
 
             # Open EchoTop File Covering the Current Time
-            idx_relevant_et = np.argmin(flt_time[i] % et_timestamps)
+            idx_relevant_et = np.argmin((flt_time[i] + gb.LOOKAHEAD_SECONDS) % et_timestamps)
             PATH_RELEVANT_ET = PATH_ECHOTOP_FLIGHTDATE + os.listdir(PATH_ECHOTOP_FLIGHTDATE)[idx_relevant_et]
             relevant_rootgrp = Dataset(PATH_RELEVANT_ET, 'r', type='NetCDF4')
             relevant_et = relevant_rootgrp.variables["ECHO_TOP"][0][0]

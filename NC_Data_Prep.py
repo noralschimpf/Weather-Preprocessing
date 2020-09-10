@@ -67,7 +67,7 @@ for file in nc_files:
       x0,y0: meters from lat:38 long:-90
       xlat,ylong: equivalent lat/long values
     '''
-    y_lat, x_lon = gb.rel_to_latlong(x0[:], y0[:], gb.LAT_ORIGIN, gb.LONG_ORIGIN, gb.R_EARTH)
+    y_lat, x_lon = gb.rel_to_latlong(x0[:], y0[:], gb.LAT_ORIGIN, gb.LON_ORIGIN, gb.R_EARTH)
     #PLOT_ONLY:x_long_mesh, y_lat_mesh = np.meshgrid(x_lon, y_lat)
     rootgrp_sorted.variables['x0'][:] = x_lon
     rootgrp_sorted.variables['y0'][:] = y_lat

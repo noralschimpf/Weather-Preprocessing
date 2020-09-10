@@ -45,7 +45,7 @@ flt_alt = flight_tr[:,3]
 # Create Basemap, plot on Latitude/Longitude scale
 m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
             resolution='l', area_thresh=1000., projection='lcc',
-            lat_0=gb.LAT_ORIGIN, lon_0=gb.LONG_ORIGIN)
+            lat_0=gb.LAT_ORIGIN, lon_0=gb.LON_ORIGIN)
 m.drawcoastlines()
 Parallels = np.arange(0., 80., 10.)
 Meridians = np.arange(10., 351., 20.)
