@@ -33,7 +33,7 @@ Flight-plan and track-point CSV's may be dropped directly into `Data/IFF_Flight_
 All Project parameters are located in `Global_Tools.py`
 * LAT_ORIGIN, LON_ORIGIN: the reference coordinates used by EchoTop databases.
 * R_EARTH: The Earth's radius, in Kilometers, used to map relative data to latitude and longitude coordinates. Currently specified for EchoTop data.
-* LOOKAHEAD_SECONDS: Number of seconds to extract weather cubes in advance of. Currently approximated as 200 seconds, in order to accommodate real-time predictions future deep-learning networks.
+* LOOKAHEAD_SECONDS: Number of seconds to extract weather cubes in advance of. Approximated as 200 seconds, in order to accommodate real-time predictions future deep-learning networks. **Currently not in use.**
 * TARGET_SAMPLE_SIZE: Ideal number of entries per flight file. This number is targetted when downsampling track points or interpolating flight plans. Current value is 500, roughly a quarter the number of entries in a flight from JFK to LAX.
 * FIGURE_FORMAT: When validation-figures are generated, this specifies the format to save each as. Currently specified as PNG.
 
