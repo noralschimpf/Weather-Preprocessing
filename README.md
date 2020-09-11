@@ -36,7 +36,8 @@ All Project parameters are located in `Global_Tools.py`
 * LOOKAHEAD_SECONDS: Number of seconds to extract weather cubes in advance of. Currently approximated as 200 seconds, in order to accommodate real-time predictions future deep-learning networks.
 * TARGET_SAMPLE_SIZE: Ideal number of entries per flight file. This number is targetted when downsampling track points or interpolating flight plans. Current value is 500, roughly a quarter the number of entries in a flight from JFK to LAX.
 * FIGURE_FORMAT: When validation-figures are generated, this specifies the format to save each as. Currently specified as PNG.
-#Future Work
+
+# Future Work
 ## NDFD Data
 The National Weather Service's [National Digital Data Forecast](https://vlab.ncep.noaa.gov/web/mdl/degrib-for-ndfd) contains a breadth of weather data covering North America. Future Data Processing may include these measurements.
 * Batch-Downloading data is being handled in Powershell currently, and requires the installation of [degrib](https://www.weather.gov/mdl/degrib_home).

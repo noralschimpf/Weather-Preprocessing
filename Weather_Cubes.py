@@ -149,7 +149,7 @@ for dir in dirs:
             # Print the max Error between cube points
             err = np.abs(weather_cube_actual - weather_cube_proj)
             err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
-            print("Max Distance Err:\t", "{:10.4f}".format(err_dist.flatten()[err_dist.argmax()]), "\t", i, ' / ',
+            print("Max Distance Err:\t", "{:10.4f}".format(err_dist.flatten()[err_dist.argmax()]), "\t", str(i+1), ' / ',
                   len(flight_tr[:, 1] - 1))
 
             # Append current cube to list of data

@@ -28,7 +28,7 @@ m.drawcoastlines(linewidth=1.25)
 m.drawparallels(np.arange(10, 60, 10), labels=[1, 0, 0, 0])
 m.drawmeridians(np.arange(-160, -50, 10), labels=[0, 0, 0, 1])
 '''
-PATH_TRACK_POINTS = gb.PATH_PROJECT + 'data/IFF_Track_Points/'
+PATH_TRACK_POINTS = gb.PATH_PROJECT + '/data/IFF_Track_Points/'
 
 # Open, plot, and downsample each flight-track CSV
 os.chdir(PATH_TRACK_POINTS)
@@ -57,7 +57,7 @@ for file in track_files:
     # Sort and Save file by timestamp
     timestamp = num2date(times[0], units="seconds since 1970-01-01T00:00:00", calendar="gregorian")
     PATH_TO_SORTED_TRACKPOINTS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
-    gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, timestamps[0], data_sliced, file)
+    gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, timestamp, data_sliced, file, bool_delete_original=True)
 
 
 # plot show

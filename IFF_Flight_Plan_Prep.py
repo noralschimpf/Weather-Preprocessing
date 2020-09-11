@@ -42,9 +42,9 @@ for file in Flight_Plan_Files:
     trk_time, trk_lat, trk_lon = None, None, None
     filed_time = np.float64(first_filed_entry[2])
     filed_date = num2date(filed_time, units='Seconds since 1970-01-01T00:00:00Z', calendar='gregorian')
-    PATH_TRACK_POINT = gb.PATH_PROJECT + 'Data/Sorted' + filed_date + '/' + file[:-6] + 'trk.txt'
+    PATH_TRACK_POINT = gb.PATH_PROJECT + 'Data/Sorted/' + filed_date.isoformat()[:10] + '/' + file[:-6] + 'trk.txt'
     if(not os.path.isfile(PATH_TRACK_POINT)):
-        print("WARNING: Track-point file not found; cannot associate timestamps")
+        print("WARNING: ", PATH_TRACK_POINT.split('/')[-1], "not found; cannot associate timestamps")
     else:
         trk_data = np.loadtxt(PATH_TRACK_POINT, delimiter=',', usecols=(0,1,2))
         trk_time = trk_data[:,0]
@@ -134,7 +134,7 @@ for file in Flight_Plan_Files:
             time_waypoints[i] = -1.
 
 
-        print(waypoints[i], '\t', str(lat), '\t', str(lon), '\t', str(alt), '\t', str(time_waypoints[i]))
+        print(waypoints[i], '\t', "{:10.5f}".format(lat), '\t', "{:10.5f}".format(lon), '\t', str(alt), '\t', str(time_waypoints[i]))
 
     # Waypoint Linear Interpolation
     slice_size = int(np.ceil(gb.TARGET_SAMPLE_SIZE / (len(waypoints)-1)))
@@ -168,7 +168,7 @@ for file in Flight_Plan_Files:
 
 
     data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T
-    gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', filed_date, data, file)
+    gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', filed_date, data, file, bool_delete_original=True)
 
     '''
     # Plot Flight Plan to Verify using Basemap
