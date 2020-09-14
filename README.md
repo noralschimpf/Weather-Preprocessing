@@ -18,6 +18,7 @@ Project was developed in Pycharm, using Python 3.6. A list of used libraries is 
 ## Project Execution
 The Python Scripts are written to be run in stages for each data-type, leading up to the generation of weather cubes.
 #### Preparing Flight Files
+Generating flight files requires access to a database of Integrated Flight Format (IFF) entries. Once available, the program in `Track_Gen_C-files` may be compiled to generate the appropriate flight plan (`_fp.txt.`) and track-point (`_trk.txt`) files.
 Flight-plan and track-point CSV's may be dropped directly into `Data/IFF_Flight_Plans` and `Data/IFF_Track_Points` respectively. 
 * `IFF_Track_Point_Prep.py` should be executed first. It will downsample the number of track-point entries and save the track-points into directores sorted by-date using the first available timestamp. Processed Track points will be saved to `Data/IFF_Track_Points/Sorted/`
 * `IFF_Flight_Plan_Prep.py` May then be executed. It will parse the initially-reported waypoints and navaids into their latitude and longitude coordinates by querying [OpenNav](https://opennav.com/). These will be interpolated and, if possible, assigned a timestamp from the flight's track point file. 
