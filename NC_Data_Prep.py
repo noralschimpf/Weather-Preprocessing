@@ -20,6 +20,7 @@ for file in nc_files:
     # Identify as Current or Forecast Data
     if(rootgrp_orig.variables.keys().__contains__('forecast_period')):
         STR_SORT_FORECAST = 'Forecast'
+        SIZE_TIME = 15
         if not file.__contains__('0000Z'):
             rootgrp_orig.close()
             file_count += 1
@@ -30,8 +31,11 @@ for file in nc_files:
         echotop = rootgrp_orig.variables["ECHO_TOP"][:15]
     else:
         STR_SORT_FORECAST = 'Current'
+        SIZE_TIME = 1
         time = rootgrp_orig.variables["time"]
         echotop = rootgrp_orig.variables["ECHO_TOP"]
+        #time.units = rootgrp_orig.variables["time"].units
+        #time.calendar = rootgrp_orig.variables["time"].calendar
     x0 = rootgrp_orig.variables["x0"]
     y0 = rootgrp_orig.variables["y0"]
     z0 = rootgrp_orig.variables["z0"]
@@ -94,12 +98,13 @@ for file in nc_files:
     plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)
     plt.close()
     '''
+    echotop, time = echotop[:], time[:]
     rootgrp_orig.close()
 
     rootgrp_sorted = Dataset(str_sorted_file, 'w', format="NETCDF4")
 
     # Add Dimensions: t, X/YPoints
-    rootgrp_sorted.createDimension('time', size=15)
+    rootgrp_sorted.createDimension('time', size=SIZE_TIME)
     rootgrp_sorted.createDimension('x0', size=5120)
     rootgrp_sorted.createDimension('y0', size=3520)
     rootgrp_sorted.createDimension('z0', size=1)
@@ -118,16 +123,17 @@ for file in nc_files:
 
 
     # Assign Weather Cube Data to netCDF Variables
-    rootgrp_sorted.variables['x0'][:] = x_lon
-    rootgrp_sorted.variables['y0'][:] = y_lat
+    rootgrp_sorted.variables['x0'][:] = x_lon[:]
+    rootgrp_sorted.variables['y0'][:] = y_lat[:]
     rootgrp_sorted.variables['z0'][:] = z0[:]
-    rootgrp_sorted.variables['time'][:] = time
-    rootgrp_sorted.variables['ECHO_TOP'][:] = echotop
+    rootgrp_sorted.variables['time'][:] = time[:]
+    rootgrp_sorted.variables['ECHO_TOP'][:] = echotop[:]
 
     rootgrp_sorted.close()
     file_count += 1
     print('converted:\t', file_count, ' of ', len(nc_files))
 
 files_to_delete = [x for x in os.listdir() if not os.path.isdir(x)]
-os.remove(files_to_delete)
+for file in files_to_delete:
+    os.remove(file)
 os.chdir(gb.PATH_PROJECT)

@@ -10,9 +10,9 @@ from numba import jit
 # open sample Trajectory and Echotop data
 CUBE_SIZE = 20
 START_POS = 0
-PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
+PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Shifted/'
 PATH_ECHOTOP_NC = gb.PATH_PROJECT + '/Data/EchoTop/Sorted/'
-PATH_ECHOTOP_FILE = PATH_ECHOTOP_NC + '2020-06-22/ciws.EchoTop.20200622T180000Z.nc'
+PATH_ECHOTOP_FILE = PATH_ECHOTOP_NC + '2020-06-22/Current/ciws.EchoTop.20200622T230000Z.nc'
 PATH_TEMP_DATA = gb.PATH_PROJECT + '/Data/TMP_200mb.txt'
 PATH_OUTPUT_CUBES = gb.PATH_PROJECT + '/Output/Weather Cubes/'
 
@@ -52,10 +52,10 @@ for dir in dirs:
                                   calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_FLIGHTDATE)]
 
         # Create Basemap, plot on Latitude/Longitude scale
-        '''
+
         m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
                     resolution='l', area_thresh=1000., projection='lcc',
-                    lat_0=gb.LAT_ORIGIN, lon_0=gb.LONG_ORIGIN)
+                    lat_0=gb.LAT_ORIGIN, lon_0=gb.LON_ORIGIN)
         m.drawcoastlines()
         Parallels = np.arange(0., 80., 10.)
         Meridians = np.arange(10., 351., 20.)
@@ -64,7 +64,7 @@ for dir in dirs:
         m.drawparallels(Parallels, labels=[False, True, True, False])
         m.drawmeridians(Meridians, labels=[True, False, False, True])
         fig2 = plt.gca()
-        '''
+
 
         # Closest-Approximation - From EchoTop
         weather_cubes_time = np.array([], dtype=float)
@@ -82,6 +82,7 @@ for dir in dirs:
             if gb.BLN_USE_FORECAST:
                 idx_time = np.argmin(relevant_rootgrp.variables['time'] % (flt_time[i] + gb.LOOKAHEAD_SECONDS))
                 relevant_et = relevant_rootgrp.variables['ECHO_TOP'][idx_time][0]
+                activetime = relevant_rootgrp.variables['time'][idx_time]
             else:
                 relevant_et = relevant_rootgrp.variables["ECHO_TOP"][0][0]
             relevant_et._set_mask(False)
@@ -157,7 +158,8 @@ for dir in dirs:
             err = np.abs(weather_cube_actual - weather_cube_proj)
             err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
             print("Max Distance Err:\t", "{:10.4f}".format(err_dist.flatten()[err_dist.argmax()]), "\t", str(i+1), ' / ',
-                  len(flight_tr[:, 1] - 1))
+                  len(flight_tr[:, 1] - 1), '\t', num2date(activetime, units='Seconds since 1970-01-01T00:00:00',
+                                                           calendar='gregorian').isoformat())
 
             # Append current cube to list of data
             weather_cubes_lat = np.append(weather_cubes_lat, weather_cube_actual[1])
@@ -167,7 +169,7 @@ for dir in dirs:
 
 
         # Verification: Plot collected cubes v. actual flight points
-        '''
+
         m.scatter(weather_cubes_lon, weather_cubes_lat, marker=',', color='blue', latlon=True)
         m.scatter(flight_tr[:, 2], flight_tr[:, 1], marker=',', color='red', latlon=True)
         plt.show(block=False)
@@ -175,7 +177,7 @@ for dir in dirs:
                                  + flt_startdate.isoformat().replace(':', '_') + '.' + gb.FIGURE_FORMAT
         plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)
         plt.close()
-        '''
+
 
         # reshape and write to NetCDF
         weather_cubes_lat = weather_cubes_lat.reshape(-1, CUBE_SIZE * CUBE_SIZE)
