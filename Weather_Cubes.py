@@ -44,7 +44,10 @@ for dir in dirs:
 
         # Generate list of EchoTop Report Times
         flt_startdate = num2date(flt_time[0], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
-        PATH_ECHOTOP_FLIGHTDATE = PATH_ECHOTOP_NC + flt_startdate.isoformat()[:10] + '/'
+        if gb.BLN_USE_FORECAST:
+            PATH_ECHOTOP_FLIGHTDATE = PATH_ECHOTOP_NC + flt_startdate.isoformat()[:10] + '/Forecast/'
+        else:
+            PATH_ECHOTOP_FLIGHTDATE = PATH_ECHOTOP_NC + flt_startdate.isoformat()[:10] + '/Current/'
         et_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
                                   calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_FLIGHTDATE)]
 
@@ -76,7 +79,11 @@ for dir in dirs:
             idx_relevant_et = np.argmin((flt_time[i]) % et_timestamps)
             PATH_RELEVANT_ET = PATH_ECHOTOP_FLIGHTDATE + os.listdir(PATH_ECHOTOP_FLIGHTDATE)[idx_relevant_et]
             relevant_rootgrp = Dataset(PATH_RELEVANT_ET, 'r', type='NetCDF4')
-            relevant_et = relevant_rootgrp.variables["ECHO_TOP"][0][0]
+            if gb.BLN_USE_FORECAST:
+                idx_time = np.argmin(relevant_rootgrp.variables['time'] % (flt_time[i] + gb.LOOKAHEAD_SECONDS))
+                relevant_et = relevant_rootgrp.variables['ECHO_TOP'][idx_time][0]
+            else:
+                relevant_et = relevant_rootgrp.variables["ECHO_TOP"][0][0]
             relevant_et._set_mask(False)
             relevant_rootgrp.close()
 
@@ -207,6 +214,7 @@ for dir in dirs:
         cubes_rootgrp.variables['time'][:] = weather_cubes_time
         cubes_rootgrp.variables['Latitude'][:] = weather_cubes_lat
         cubes_rootgrp.variables['Longitude'][:] = weather_cubes_lon
+        cubes_rootgrp.variables['Echo_Top'][:] = weather_cubes_et
 
         cubes_rootgrp.close()
     os.chdir('..')

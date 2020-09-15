@@ -10,7 +10,7 @@ import Global_Tools as gb
 
 # Shift Flight Track-Point to a New Start-Time
 PATH_FILES_TO_SHIFT = gb.PATH_PROJECT + '/Data/IFF_Track_Points/'
-TIME_START_TARGET = datetime(year=2020, month=6, day=22, hour=18, minute=00)
+TIME_START_TARGET = datetime(year=2018, month=11, day=4, hour=18, minute=00)
 
 os.chdir(PATH_FILES_TO_SHIFT)
 
