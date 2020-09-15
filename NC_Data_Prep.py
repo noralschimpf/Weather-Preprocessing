@@ -1,30 +1,25 @@
 from netCDF4 import Dataset, num2date, date2num, MFDataset
 import numpy as np
 import os
-from shutil import copyfile
 from mpl_toolkits.basemap import Basemap
 from matplotlib import cm, pyplot as plt
 import Global_Tools as gb
 from mpl_toolkits.mplot3d import axes3d
-from datetime import datetime
+from concurrent import futures
 
-PATH_ECHOTOP_RAW = gb.PATH_PROJECT + '/Data/EchoTop/'
-os.chdir(PATH_ECHOTOP_RAW)
-nc_files = [x for x in os.listdir() if x.__contains__('.nc')]
 
-#TODO: Multiprocessing
-file_count = 0
-for file in nc_files:
+# TODO: Multiprocessing
+
+def process_file(file, path_et):
     rootgrp_orig = Dataset(file, "r", format="netCDF4")
 
     # Identify as Current or Forecast Data
-    if(rootgrp_orig.variables.keys().__contains__('forecast_period')):
+    if (rootgrp_orig.variables.keys().__contains__('forecast_period')):
         STR_SORT_FORECAST = 'Forecast'
         SIZE_TIME = 15
         if not file.__contains__('0000Z'):
             rootgrp_orig.close()
-            file_count += 1
-            continue
+            return
         time = rootgrp_orig.variables["times"][:15]
         time.units = rootgrp_orig.variables["times"].units
         time.calendar = rootgrp_orig.variables["times"].calendar
@@ -34,8 +29,8 @@ for file in nc_files:
         SIZE_TIME = 1
         time = rootgrp_orig.variables["time"]
         echotop = rootgrp_orig.variables["ECHO_TOP"]
-        #time.units = rootgrp_orig.variables["time"].units
-        #time.calendar = rootgrp_orig.variables["time"].calendar
+        # time.units = rootgrp_orig.variables["time"].units
+        # time.calendar = rootgrp_orig.variables["time"].calendar
     x0 = rootgrp_orig.variables["x0"]
     y0 = rootgrp_orig.variables["y0"]
     z0 = rootgrp_orig.variables["z0"]
@@ -44,12 +39,11 @@ for file in nc_files:
 
     # Save Data as Sorted netCDF4
     str_current_date = date.isoformat()[:10]
-    if not os.path.isdir(PATH_ECHOTOP_RAW + '/Sorted/' + str_current_date):
-        os.mkdir(PATH_ECHOTOP_RAW + '/Sorted/' + str_current_date)
-    if not os.path.isdir(PATH_ECHOTOP_RAW + '/Sorted/' + str_current_date + '/' + STR_SORT_FORECAST):
-        os.mkdir(PATH_ECHOTOP_RAW + '/Sorted/' + str_current_date + '/' + STR_SORT_FORECAST)
-    str_sorted_file = PATH_ECHOTOP_RAW + 'Sorted/' + str_current_date + '/' + STR_SORT_FORECAST + '/' + file
-
+    if not os.path.isdir(path_et + '\\Sorted\\' + str_current_date):
+        os.mkdir(path_et + '\\Sorted\\' + str_current_date)
+    if not os.path.isdir(path_et + '\\Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST):
+        os.mkdir(path_et + '\\Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST)
+    str_sorted_file = path_et + 'Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST + '\\' + file
 
     # Unlock Masked Data
     for v in [x0, y0, z0, echotop, time]:
@@ -59,13 +53,13 @@ for file in nc_files:
     '''
         Map EchoTop x,y to Lambert Conformal Projection
           x0,y0: meters from lat:38 long:-90
-          xlat,ylong: equivalent lat/long values
+          xlat,ylong: equivalent lat\\long values
         '''
     y_lat, x_lon = gb.rel_to_latlong(x0[:], y0[:], gb.LAT_ORIGIN, gb.LON_ORIGIN, gb.R_EARTH)
 
     '''
     PLOT_ONLY:
-    # Create Basemap, plot on Latitude/Longitude scale
+    # Create Basemap, plot on Latitude\\Longitude scale
     m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
                 resolution='l', area_thresh=1000., projection='lcc',
                 lat_0=gb.LAT_ORIGIN, lon_0=gb.LON_ORIGIN)
@@ -82,9 +76,7 @@ for file in nc_files:
     fig2 = plt.gca()
     '''
 
-
-    #PLOT_ONLY:x_long_mesh, y_lat_mesh = np.meshgrid(x_lon, y_lat)
-
+    # PLOT_ONLY:x_long_mesh, y_lat_mesh = np.meshgrid(x_lon, y_lat)
 
     '''
     PLOT_ONLY:
@@ -93,7 +85,7 @@ for file in nc_files:
     ET_Lambert_Contour = m.contourf(x_long_mesh, y_lat_mesh, echotop[0][0], color_levels, latlon=True, cmap=cm.coolwarm)
     m.colorbar(ET_Lambert_Contour, location='right', pad='5%')
     plt.show(block=False)
-    PATH_FIGURE_PROJECTION = gb.PATH_PROJECT + '/Output/EchoTop_Projected/' \
+    PATH_FIGURE_PROJECTION = gb.PATH_PROJECT + '\\Output\\EchoTop_Projected\\' \
                              + dates[0].isoformat().replace(':', '_') + '.' + gb.FIGURE_FORMAT
     plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)
     plt.close()
@@ -103,13 +95,13 @@ for file in nc_files:
 
     rootgrp_sorted = Dataset(str_sorted_file, 'w', format="NETCDF4")
 
-    # Add Dimensions: t, X/YPoints
+    # Add Dimensions: t, X\\YPoints
     rootgrp_sorted.createDimension('time', size=SIZE_TIME)
     rootgrp_sorted.createDimension('x0', size=5120)
     rootgrp_sorted.createDimension('y0', size=3520)
     rootgrp_sorted.createDimension('z0', size=1)
 
-    # Add Variables: t, X/YPoints, lat/lon, echotop
+    # Add Variables: t, X\\YPoints, lat\\lon, echotop
     rootgrp_sorted.createVariable('time', datatype=float, dimensions=('time'), zlib=True, least_significant_digit=5)
     rootgrp_sorted.variables['time'].units = 'Seconds since 1970-01-01T00:00:00'
     rootgrp_sorted.variables['time'].calendar = 'gregorian'
@@ -119,8 +111,8 @@ for file in nc_files:
     rootgrp_sorted.variables['y0'].units = 'degrees latitude'
     rootgrp_sorted.createVariable('z0', datatype=float, dimensions=('z0'), zlib=True, least_significant_digit=5)
     rootgrp_sorted.variables['y0'].units = 'meters'
-    rootgrp_sorted.createVariable('ECHO_TOP', datatype=float, dimensions=('time', 'z0', 'y0', 'x0'), zlib=True, least_significant_digit=5)
-
+    rootgrp_sorted.createVariable('ECHO_TOP', datatype=float, dimensions=('time', 'z0', 'y0', 'x0'), zlib=True,
+                                  least_significant_digit=5)
 
     # Assign Weather Cube Data to netCDF Variables
     rootgrp_sorted.variables['x0'][:] = x_lon[:]
@@ -130,10 +122,22 @@ for file in nc_files:
     rootgrp_sorted.variables['ECHO_TOP'][:] = echotop[:]
 
     rootgrp_sorted.close()
-    file_count += 1
-    print('converted:\t', file_count, ' of ', len(nc_files))
 
-files_to_delete = [x for x in os.listdir() if not os.path.isdir(x)]
-for file in files_to_delete:
-    os.remove(file)
-os.chdir(gb.PATH_PROJECT)
+    print('converted:\t', file)
+    return
+
+def main():
+    PATH_ECHOTOP_RAW = gb.PATH_PROJECT + '\\Data\\EchoTop\\'
+    os.chdir(PATH_ECHOTOP_RAW)
+    nc_files = [x for x in os.listdir() if x.__contains__('.nc')]
+    with futures.ProcessPoolExecutor(max_workers=6) as executor:
+        executor.submit(process_file, nc_files, PATH_ECHOTOP_RAW)
+
+    files_to_delete = [x for x in os.listdir() if not os.path.isdir(x)]
+    #for file in files_to_delete:
+        # os.remove(file)
+    os.chdir(gb.PATH_PROJECT)
+
+
+if __name__ == '__main__':
+    main()
