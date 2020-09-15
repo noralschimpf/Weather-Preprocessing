@@ -10,7 +10,7 @@ from numba import jit
 # open sample Trajectory and Echotop data
 CUBE_SIZE = 20
 START_POS = 0
-PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Shifted/'
+PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
 PATH_ECHOTOP_NC = gb.PATH_PROJECT + '/Data/EchoTop/Sorted/'
 PATH_ECHOTOP_FILE = PATH_ECHOTOP_NC + '2020-06-22/Current/ciws.EchoTop.20200622T230000Z.nc'
 PATH_TEMP_DATA = gb.PATH_PROJECT + '/Data/TMP_200mb.txt'
@@ -48,6 +48,10 @@ for dir in dirs:
             PATH_ECHOTOP_FLIGHTDATE = PATH_ECHOTOP_NC + flt_startdate.isoformat()[:10] + '/Forecast/'
         else:
             PATH_ECHOTOP_FLIGHTDATE = PATH_ECHOTOP_NC + flt_startdate.isoformat()[:10] + '/Current/'
+        if not os.path.isdir(PATH_ECHOTOP_FLIGHTDATE):
+            print('ERR: No EchoTop Data for ', file)
+            continue
+
         et_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
                                   calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_FLIGHTDATE)]
 
