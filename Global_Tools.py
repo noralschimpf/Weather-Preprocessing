@@ -1,13 +1,16 @@
 import numpy as np
 import math
 import os, re
+import cProfile, pstats, io
 
 # Global Constants, specc'd by SHERLOC
 LAT_ORIGIN = 38.
 LON_ORIGIN = -98.
 R_EARTH = 6370997
+# TODO: control multiple lookahead values
 LOOKAHEAD_SECONDS = 200.
 BLN_USE_FORECAST = True
+PROCESS_MAX = 4
 
 # Path / Project Vars
 TARGET_SAMPLE_SIZE = 500
@@ -61,7 +64,7 @@ find the indices of local extrema (min and max)
 in the input array.
 """
 
-
+'''
 def extrema(mat, mode='wrap', window=10):
     mn = minimum_filter(mat, size=window, mode=mode)
     mx = maximum_filter(mat, size=window, mode=mode)
@@ -69,7 +72,7 @@ def extrema(mat, mode='wrap', window=10):
     # (mat == mn) true if pixel is equal to the local in
     # Return the indices of the maxima, minima
     return np.nonzero(mat == mn), np.nonzero(mat == mx)
-
+'''
 
 '''
 convert between Strings and their unicode-lists
@@ -163,3 +166,21 @@ def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, filename, boo
     np.savetxt(PATH_START_DATE, data_to_save, delimiter=',', fmt='%s')
     if bool_delete_original:
         os.remove(filename)
+'''
+Decorate (@profile) to generate a function profile
+'''
+
+def profile(fnc):
+    def inner(*args, **kwargs):
+        pr = cProfile.Profile()
+        pr.enable()
+        retval = fnc(*args,**kwargs)
+        pr.disable()
+        s = io.StringIO()
+        sortby = 'cumulative'
+        PATH_DUMP_FILE = PATH_PROJECT + '/Output/Profiler/' + fnc + '.txt'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.dump_stats(PATH_DUMP_FILE)
+        print(s.getvalue())
+        return retval
+    return inner

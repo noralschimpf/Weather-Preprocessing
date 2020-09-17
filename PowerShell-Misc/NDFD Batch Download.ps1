@@ -24,8 +24,6 @@ workflow batch-download
 
 
 
-#TODO: Set as Function Variables
-
 $STR_DOWNLOAD_DAY = '2019-06-10'
 $BATCH_ONLY = $TRUE
 

@@ -6,11 +6,28 @@ from matplotlib import cm, pyplot as plt
 import Global_Tools as gb
 from mpl_toolkits.mplot3d import axes3d
 from concurrent import futures
+from functools import partial
+import cProfile, pstats, io, datetime
 
-
+def profile(fnc):
+    def inner(*args, **kwargs):
+        pr = cProfile.Profile()
+        pr.enable()
+        retval = fnc(*args,**kwargs)
+        pr.disable()
+        s = io.StringIO()
+        sortby = 'cumulative'
+        PATH_DUMP_FILE = gb.PATH_PROJECT + '/Output/Profiler/NC_Data_Prep.txt'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats(.25)
+        ps.print_callers(.25).sort_stats(sortby)
+        print(s.getvalue())
+        return retval
+    return inner
 # TODO: Multiprocessing
 
-def process_file(file, path_et):
+def process_file(path_et, file):
+    print('Processing ', file)
     rootgrp_orig = Dataset(file, "r", format="netCDF4")
 
     # Identify as Current or Forecast Data
@@ -19,23 +36,26 @@ def process_file(file, path_et):
         SIZE_TIME = 15
         if not file.__contains__('0000Z'):
             rootgrp_orig.close()
+            print('Skipping ', file)
             return
         time = rootgrp_orig.variables["times"][:15]
         time.units = rootgrp_orig.variables["times"].units
         time.calendar = rootgrp_orig.variables["times"].calendar
+        rootgrp_orig.variables['ECHO_TOP'].set_auto_mask(False)
         echotop = rootgrp_orig.variables["ECHO_TOP"][:15]
     else:
         STR_SORT_FORECAST = 'Current'
         SIZE_TIME = 1
         time = rootgrp_orig.variables["time"]
         echotop = rootgrp_orig.variables["ECHO_TOP"]
-        # time.units = rootgrp_orig.variables["time"].units
-        # time.calendar = rootgrp_orig.variables["time"].calendar
-    x0 = rootgrp_orig.variables["x0"]
-    y0 = rootgrp_orig.variables["y0"]
-    z0 = rootgrp_orig.variables["z0"]
+        echotop.set_auto_mask(False)
+
+    x0 = rootgrp_orig.variables["x0"][:]
+    y0 = rootgrp_orig.variables["y0"][:]
+    z0 = rootgrp_orig.variables["z0"][:]
 
     date = num2date(time[0], units=time.units, calendar=time.calendar)
+    echotop, time = echotop[:], time[:]
 
     # Save Data as Sorted netCDF4
     str_current_date = date.isoformat()[:10]
@@ -45,11 +65,7 @@ def process_file(file, path_et):
         os.mkdir(path_et + '\\Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST)
     str_sorted_file = path_et + 'Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST + '\\' + file
 
-    # Unlock Masked Data
-    for v in [x0, y0, z0, echotop, time]:
-        if v.mask:
-            v.set_auto_mask(False)
-            v = v[::]
+
     '''
         Map EchoTop x,y to Lambert Conformal Projection
           x0,y0: meters from lat:38 long:-90
@@ -90,7 +106,6 @@ def process_file(file, path_et):
     plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)
     plt.close()
     '''
-    echotop, time = echotop[:], time[:]
     rootgrp_orig.close()
 
     rootgrp_sorted = Dataset(str_sorted_file, 'w', format="NETCDF4")
@@ -102,17 +117,17 @@ def process_file(file, path_et):
     rootgrp_sorted.createDimension('z0', size=1)
 
     # Add Variables: t, X\\YPoints, lat\\lon, echotop
-    rootgrp_sorted.createVariable('time', datatype=float, dimensions=('time'), zlib=True, least_significant_digit=5)
+    rootgrp_sorted.createVariable('time', datatype=float, dimensions=('time'), zlib=True, complevel=6)
     rootgrp_sorted.variables['time'].units = 'Seconds since 1970-01-01T00:00:00'
     rootgrp_sorted.variables['time'].calendar = 'gregorian'
-    rootgrp_sorted.createVariable('x0', datatype=float, dimensions=('x0'), zlib=True, least_significant_digit=5)
+    rootgrp_sorted.createVariable('x0', datatype=float, dimensions=('x0'), zlib=True, complevel=6, least_significant_digit=5)
     rootgrp_sorted.variables['x0'].units = 'degrees longitude'
-    rootgrp_sorted.createVariable('y0', datatype=float, dimensions=('y0'), zlib=True, least_significant_digit=5)
+    rootgrp_sorted.createVariable('y0', datatype=float, dimensions=('y0'), zlib=True, complevel=6, least_significant_digit=5)
     rootgrp_sorted.variables['y0'].units = 'degrees latitude'
-    rootgrp_sorted.createVariable('z0', datatype=float, dimensions=('z0'), zlib=True, least_significant_digit=5)
+    rootgrp_sorted.createVariable('z0', datatype=float, dimensions=('z0'), zlib=True, complevel=6, least_significant_digit=5)
     rootgrp_sorted.variables['y0'].units = 'meters'
     rootgrp_sorted.createVariable('ECHO_TOP', datatype=float, dimensions=('time', 'z0', 'y0', 'x0'), zlib=True,
-                                  least_significant_digit=5)
+                                  complevel=6, least_significant_digit=5)
 
     # Assign Weather Cube Data to netCDF Variables
     rootgrp_sorted.variables['x0'][:] = x_lon[:]
@@ -125,17 +140,26 @@ def process_file(file, path_et):
 
     print('converted:\t', file)
     return
-
+#@profile
 def main():
     PATH_ECHOTOP_RAW = gb.PATH_PROJECT + '\\Data\\EchoTop\\'
     os.chdir(PATH_ECHOTOP_RAW)
+    process_file_partial = partial(process_file, PATH_ECHOTOP_RAW)
     nc_files = [x for x in os.listdir() if x.__contains__('.nc')]
-    with futures.ProcessPoolExecutor(max_workers=6) as executor:
-        executor.submit(process_file, nc_files, PATH_ECHOTOP_RAW)
+    #for file in nc_files:
+    #    process_file_partial(file)
+    starttime = datetime.datetime.now()
+    with futures.ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
+        executor.map(process_file_partial, nc_files)
 
     files_to_delete = [x for x in os.listdir() if not os.path.isdir(x)]
-    #for file in files_to_delete:
-        # os.remove(file)
+    yndelete = input('delete unsorted files? [y/n]')
+    if yndelete.lower() == 'y':
+        for file in files_to_delete:
+             os.remove(file)
+    endtime = datetime.datetime.now()
+    delta = endtime - starttime
+    print('PROCESSING DONE. Runtime: ', delta.total_seconds(), ' seconds')
     os.chdir(gb.PATH_PROJECT)
 
 
