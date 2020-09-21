@@ -3,12 +3,12 @@ from Global_Tools import profile
 import numpy as np
 import math, os, datetime
 from mpl_toolkits.basemap import Basemap
-from matplotlib import cm, pyplot as plt
+from matplotlib import pyplot as plt
 from netCDF4 import Dataset, num2date, date2num
 from dateutil import parser as dparser
-from numba import jit
 
-@profile
+
+#@profile
 def main():
     dirs = [x for x in os.listdir() if os.path.isdir(x)]
     for dir in dirs:
@@ -21,6 +21,9 @@ def main():
             flt_lat = flight_tr[:, 1]
             flt_lon = flight_tr[:, 2]
             flt_alt = flight_tr[:, 3]
+
+            relevant_et = np.zeros((len(gb.LOOKAHEAD_SECONDS), len(et_lat), len(et_lon)), dtype=float)
+            idx_cur_et, idx_forecast_times = None, [-1] * (len(gb.LOOKAHEAD_SECONDS)-forecast_start)
 
             # Generate list of EchoTop Report Times
             flt_startdate = num2date(flt_time[0], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
@@ -64,25 +67,27 @@ def main():
             for i in range(START_POS, len(flight_tr[:, ]) - 1):
 
                 # Open EchoTop File Covering the Current Time
-                relevant_et = np.zeros((len(gb.LOOKAHEAD_SECONDS), len(et_lat), len(et_lon)), dtype=float)
-                forecast_start = 0
                 if USES_CURRENT:
-                    idx_cur_et = np.argmin((flt_time[i]) % cur_timestamps)
-                    PATH_ECHOTOP_CUR = PATH_ECHOTOP_CUR_DATE + os.listdir(PATH_ECHOTOP_CUR_DATE)[idx_cur_et]
-                    et_cur_rootgrp = Dataset(PATH_ECHOTOP_CUR, 'r', format='NetCDF4')
-                    et_cur_rootgrp.variables['ECHO_TOP'].set_auto_mask(False)
-                    relevant_et[0] = et_cur_rootgrp.variables['ECHO_TOP'][0][0]
-                    et_cur_rootgrp.close()
-                    forecast_start += 1
+                    temp_idx = np.argmin((flt_time[i]) % cur_timestamps)
+                    if temp_idx != idx_cur_et:
+                        idx_cur_et = temp_idx
+                        PATH_ECHOTOP_CUR = PATH_ECHOTOP_CUR_DATE + os.listdir(PATH_ECHOTOP_CUR_DATE)[idx_cur_et]
+                        et_cur_rootgrp = Dataset(PATH_ECHOTOP_CUR, 'r', format='NetCDF4')
+                        et_cur_rootgrp.variables['ECHO_TOP'].set_auto_mask(False)
+                        relevant_et[0] = et_cur_rootgrp['ECHO_TOP'][0][0]
+                        et_cur_rootgrp.close()
                 if USES_FORECAST:
                     idx_fore_et = np.argmin(flt_time[i] % fore_timestamps)
                     PATH_ECHOTOP_FORE = PATH_ECHOTOP_FORE_DATE + os.listdir(PATH_ECHOTOP_FORE_DATE)[idx_fore_et]
                     et_fore_rootgrp = Dataset(PATH_ECHOTOP_FORE, 'r', format='NETCDF4')
+                    et_fore_timestamps = et_fore_rootgrp['time'][:]
                     et_fore_rootgrp.variables['ECHO_TOP'].set_auto_mask(False)
                     for t in range(forecast_start, len(gb.LOOKAHEAD_SECONDS)):
                         idx_time = np.argmin(
-                            et_fore_rootgrp.variables['time'] % (flt_time[i] + gb.LOOKAHEAD_SECONDS[t]))
-                        relevant_et[t] = et_fore_rootgrp.variables['ECHO_TOP'][idx_time][0]
+                            et_fore_timestamps % (flt_time[i] + gb.LOOKAHEAD_SECONDS[t]))
+                        if idx_time != idx_forecast_times[t - forecast_start]:
+                            idx_forecast_times[t - forecast_start] = idx_time
+                            relevant_et[t] = et_fore_rootgrp.variables['ECHO_TOP'][idx_time][0]
                     et_fore_rootgrp.close()
 
                 # Heading Projection & Ortho for point
@@ -231,17 +236,17 @@ if __name__ == '__main__':
     PATH_TEMP_DATA = gb.PATH_PROJECT + '/Data/TMP_200mb.txt'
     PATH_OUTPUT_CUBES = gb.PATH_PROJECT + '/Output/Weather Cubes/'
 
-
     # temp_data = np.loadtxt(PATH_TEMP_DATA)
     echotop_rootgrp = Dataset(PATH_ECHOTOP_FILE + '', delimiter=',', format='NETCDF4')
 
     et_lon = echotop_rootgrp.variables['x0'][:]
     et_lat = echotop_rootgrp.variables['y0'][:]
-
     echotop_rootgrp.close()
 
     USES_CURRENT = gb.LOOKAHEAD_SECONDS.__contains__(0.)
     USES_FORECAST = gb.LOOKAHEAD_SECONDS[len(gb.LOOKAHEAD_SECONDS)-1] > 0.
+    if USES_CURRENT: forecast_start = 1
+    else: forecast_start = 0
 
     PATH_COORDS = PATH_COORDS.replace('Sorted', 'Shifted')
     os.chdir(PATH_COORDS)
