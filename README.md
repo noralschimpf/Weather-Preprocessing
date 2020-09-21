@@ -48,6 +48,9 @@ All Project parameters are located in `Global_Tools.py`
   * Tested for 4 processes with 10Gb heap. 
 
 # Future Work
+## Optimization
+* Generating feature cubes is largely limited by the read-times for netCDF files. Future implementations may move toward loading EchoTop data into SQL databases.
+* Optimization may rely more heavily on Pandas library, and potentially numba
 ## NDFD Data
 The National Weather Service's [National Digital Data Forecast](https://vlab.ncep.noaa.gov/web/mdl/degrib-for-ndfd) contains a breadth of weather data covering North America. Future Data Processing may include these measurements.
 * Batch-Downloading data is being handled in Powershell currently, and requires the installation of [degrib](https://www.weather.gov/mdl/degrib_home).
