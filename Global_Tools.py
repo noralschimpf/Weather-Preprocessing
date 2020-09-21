@@ -1,15 +1,14 @@
 import numpy as np
 import math
 import os, re
-import cProfile, pstats, io
+from line_profiler import LineProfiler
 
 # Global Constants, specc'd by SHERLOC
 LAT_ORIGIN = 38.
 LON_ORIGIN = -98.
 R_EARTH = 6370997
 # TODO: control multiple lookahead values
-LOOKAHEAD_SECONDS = [0.]
-BLN_USE_FORECAST = True
+LOOKAHEAD_SECONDS = [0., 300.]
 PROCESS_MAX = 4
 
 # Path / Project Vars
@@ -49,13 +48,13 @@ def heading_a_to_b(a_lon, a_lat, b_lon, b_lat, spherical=True):
     if spherical:
         x = (math.cos(b_lat) * math.sin(a_lat)) - (math.sin(b_lat) * math.cos(a_lat) * math.cos(a_lon - b_lon))
         y = math.sin(a_lon - b_lon) * math.cos(a_lat)
-        theta = math.atan2(y,x)
+        theta = math.atan2(y, x)
         heading = (theta * 180 / math.pi + 360) % 360
     else:
         delta_x = b_lon - a_lon
         delta_y = b_lat - a_lat
         theta = math.atan2(delta_y, delta_x)
-        heading = (90 - theta*180/math.pi) % 360
+        heading = (90 - theta * 180 / math.pi) % 360
     return heading
 
 
@@ -83,15 +82,18 @@ def str_to_unicode(string_in):
     string_temp = ''
     for char in string_in:
         str_dig = str(ord(char))
-        str_temp = str_temp + str_dig.zfill(4-len(str_dig))
+        str_temp = str_temp + str_dig.zfill(4 - len(str_dig))
     return str(string_temp)
+
 
 def unicode_to_str(unicode_in):
     str_unicode = str(unicode_in)
     str_temp = ''
-    for i in range(0,len(str_unicode)%4):
-        str_temp = str_temp + chr(str_unicode[i:i+3])
+    for i in range(0, len(str_unicode) % 4):
+        str_temp = str_temp + chr(str_unicode[i:i + 3])
     return str(str_temp)
+
+
 '''
 Returns searchable NavAid and Waypoint callsigns for OpenNav
 DELETES headings
@@ -107,28 +109,30 @@ def clean_waypoints(split_waypoints):
         digit_substr = re.findall('[^a-zA-Z]+', temp_waypoints[i])
         if (len(digit_substr) != 0):
             digit_start = temp_waypoints[i].find(digit_substr[0])
-            if (digit_start >2 or digit_start<=1):
+            if (digit_start > 2 or digit_start <= 1):
                 temp_waypoints[i] = temp_waypoints[i][:digit_start]
     temp_waypoints = [x for x in temp_waypoints if len(x) > 1]
     return temp_waypoints
+
 
 '''
 Returns an array of numbers parsed from a string
 any length of non-numeric characters ('.' excluded) is a delimiter
 '''
 
+
 def parse_coords_from_str(str_in):
     arr_coords = np.zeros((3,), dtype=np.float)
     str_in_split = str_in.split(' ')
     char_sign = str_in_split[3]
     sign = 1
-    if(char_sign == 'W' or char_sign == 'S'):
+    if (char_sign == 'W' or char_sign == 'S'):
         sign = -1
 
     for item in range(len(str_in_split)):
         str_in_split[item] = str_in_split[item][:-1]
-        if(item < 3):
-            arr_coords[item] = sign*float(str_in_split[item])
+        if (item < 3):
+            arr_coords[item] = sign * float(str_in_split[item])
 
     return arr_coords
 
@@ -136,12 +140,13 @@ def parse_coords_from_str(str_in):
 '''
 Converts an array [Degrees, Minutes, Seconds] into a single float degree
 '''
+
+
 def DegMinSec_to_Degree(arr_DegMinSec):
     degrees = float(arr_DegMinSec[0])
-    degrees += arr_DegMinSec[1]/60.
-    degrees += arr_DegMinSec[2]/3600.
+    degrees += arr_DegMinSec[1] / 60.
+    degrees += arr_DegMinSec[2] / 3600.
     return degrees
-
 
 
 '''
@@ -158,7 +163,8 @@ Call from within iterator (for file in os.listdir():)
 
 
 # TODO: Append/replace file if existing
-def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, filename, bool_delete_original=False, bool_append=False):
+def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, filename, bool_delete_original=False,
+                     bool_append=False):
     str_current_date = datetime_obj.isoformat()[:10]
     if not (os.listdir(PATH_TO_DATA_DIR).__contains__(str_current_date)):
         os.mkdir(PATH_TO_DATA_DIR + str_current_date)
@@ -166,21 +172,15 @@ def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, filename, boo
     np.savetxt(PATH_START_DATE, data_to_save, delimiter=',', fmt='%s')
     if bool_delete_original:
         os.remove(filename)
-'''
-Decorate (@profile) to generate a function profile
-'''
 
+
+# Decorate (@profile) to generate a function profile
 def profile(fnc):
     def inner(*args, **kwargs):
-        pr = cProfile.Profile()
-        pr.enable()
-        retval = fnc(*args,**kwargs)
-        pr.disable()
-        s = io.StringIO()
-        sortby = 'cumulative'
-        PATH_DUMP_FILE = PATH_PROJECT + '/Output/Profiler/' + fnc + '.txt'
-        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-        ps.dump_stats(PATH_DUMP_FILE)
-        print(s.getvalue())
+        lp = LineProfiler()
+        lp_wrapper = lp(fnc)
+        retval = lp_wrapper(*args, **kwargs)
+        lp.print_stats()
         return retval
+
     return inner
