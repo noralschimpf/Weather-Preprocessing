@@ -11,12 +11,18 @@ Project was developed in Pycharm, using Python 3.6. A list of used libraries is 
   * basemap
 * beautifulsoup4
 * numpy
-* numba
 * pandas
 * requests
-* scipy
+
+#### PyCharm Environment
+Project was developed and tested using PyCharm 2020.1. If using PyCharm, it is strongly encouraged to disable indexing and Windows Defender scanning of the data directory.
+* To disable indexing, right click on `Data` in the project explorer, and follow `mark as` | `excluded`
+* When PyCharm is first started, it will display a pop-up to disable Windows Defender Scanning (`Windows Defender might be impacting your build and IDE performance. PyCharm checked the following directories:`)
+  * Running the linked script (`elevator.exe`) will disable this permanently, despite the pop-up reapperaing with session launches.
+  * alternatively, in windows settings: `Virus and threat protection settings` | `add or remove exclusions` | `add exclusion` and point to the data directory in this project.
 ## Project Execution
 The Python Scripts are written to be run in stages for each data-type, leading up to the generation of weather cubes.
+
 #### Preparing Flight Files
 Generating flight files requires access to a database of Integrated Flight Format (IFF) entries. Once available, the program in `Track_Gen_C-files` may be compiled to generate the appropriate flight plan (`_fp.txt.`) and track-point (`_trk.txt`) files.
 Flight-plan and track-point CSV's may be dropped directly into `Data/IFF_Flight_Plans` and `Data/IFF_Track_Points` respectively. 
@@ -32,11 +38,14 @@ Flight-plan and track-point CSV's may be dropped directly into `Data/IFF_Flight_
 * At current, Weather cubes are extracted based on the sorted track point files. Once all Track point files for a batch have been sorted, `Weather_Cubes.py` will generate a netCDF file containing the EchoTop data relevant to each flight.
 # Project Parameters
 All Project parameters are located in `Global_Tools.py`
-* LAT_ORIGIN, LON_ORIGIN: the reference coordinates used by EchoTop databases.
-* R_EARTH: The Earth's radius, in Kilometers, used to map relative data to latitude and longitude coordinates. Currently specified for EchoTop data.
-* LOOKAHEAD_SECONDS: Number of seconds to extract weather cubes in advance of. Approximated as 200 seconds, in order to accommodate real-time predictions future deep-learning networks. **Currently not in use.**
-* TARGET_SAMPLE_SIZE: Ideal number of entries per flight file. This number is targetted when downsampling track points or interpolating flight plans. Current value is 500, roughly a quarter the number of entries in a flight from JFK to LAX.
-* FIGURE_FORMAT: When validation-figures are generated, this specifies the format to save each as. Currently specified as PNG.
+* `LAT_ORIGIN`, `LON_ORIGIN`: the reference coordinates used by EchoTop databases.
+* `R_EARTH`: The Earth's radius, in Kilometers, used to map relative data to latitude and longitude coordinates. Currently specified for EchoTop data.
+* `LOOKAHEAD_SECONDS`: Number of seconds to extract weather cubes in advance of. **must be a list**. specifying 0 will read EchoTop reported data. Any non-zero value will read from EchoTop forecasts at the expected times for the flight.
+* `TARGET_SAMPLE_SIZE`: Ideal number of entries per flight file. This number is targetted when downsampling track points or interpolating flight plans. Current value is 500, roughly a quarter the number of entries in a flight from JFK to LAX.
+* `FIGURE_FORMAT`: When validation-figures are generated, this specifies the format to save each as. Currently specified as PNG.
+* `PROCESS_MAX`: maximum number of process generated to batch preprocessing. This will more likely be memory-constrained than CPU-constrained.
+  * Tested for 1 process with default PyCharm heap (4GB).
+  * Tested for 4 processes with 10Gb heap. 
 
 # Future Work
 ## NDFD Data

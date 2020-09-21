@@ -9,10 +9,11 @@ LON_ORIGIN = -98.
 R_EARTH = 6370997
 # TODO: control multiple lookahead values
 LOOKAHEAD_SECONDS = [0., 300.]
-PROCESS_MAX = 4
+
 
 # Path / Project Vars
 TARGET_SAMPLE_SIZE = 500
+PROCESS_MAX = 4
 PATH_PROJECT = os.path.abspath('.')
 FIGURE_FORMAT = 'png'
 

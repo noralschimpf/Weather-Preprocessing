@@ -4,7 +4,6 @@ import math, os, datetime
 from mpl_toolkits.basemap import Basemap
 from matplotlib import cm, pyplot as plt
 from netCDF4 import Dataset, num2date
-from numba import jit
 
 #open sample Trajectory and Echotop data
 CUBE_SIZE = 20
