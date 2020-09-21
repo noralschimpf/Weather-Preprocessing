@@ -24,6 +24,11 @@ et_lon = echotop_rootgrp.variables['x0'][:]
 et_lat = echotop_rootgrp.variables['y0'][:]
 
 echotop_rootgrp.close()
+
+USES_CURRENT = gb.LOOKAHEAD_SECONDS.__contains__(0.)
+USES_FORECAST = gb.LOOKAHEAD_SECONDS[len(gb.LOOKAHEAD_SECONDS)-1] > 0.
+
+PATH_COORDS = PATH_COORDS.replace('Sorted', 'Shifted')
 os.chdir(PATH_COORDS)
 dirs = [x for x in os.listdir() if os.path.isdir(x)]
 for dir in dirs:
@@ -32,11 +37,6 @@ for dir in dirs:
 
         # Load Flight Data and EchoTop Coordinates
         flight_tr = np.loadtxt(file, delimiter=',')
-
-        # echotop_rootgrp.variables['ECHO_TOP'].set_auto_mask(False)
-        # et_echotop = echotop_rootgrp.variables['ECHO_TOP'][0][0]
-
-        flt_callsign = PATH_COORDS.split('_')[-2]
         flt_time = flight_tr[:, 0]
         flt_lat = flight_tr[:, 1]
         flt_lon = flight_tr[:, 2]
@@ -44,19 +44,24 @@ for dir in dirs:
 
         # Generate list of EchoTop Report Times
         flt_startdate = num2date(flt_time[0], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
-        if gb.BLN_USE_FORECAST:
-            PATH_ECHOTOP_FLIGHTDATE = PATH_ECHOTOP_NC + flt_startdate.isoformat()[:10] + '/Forecast/'
-        else:
-            PATH_ECHOTOP_FLIGHTDATE = PATH_ECHOTOP_NC + flt_startdate.isoformat()[:10] + '/Current/'
-        if not os.path.isdir(PATH_ECHOTOP_FLIGHTDATE):
-            print('ERR: No EchoTop Data for ', file)
-            continue
+        cur_timestamps, fore_timestamps = None, None
+        if USES_FORECAST:
+            PATH_ECHOTOP_FORE_DATE = PATH_ECHOTOP_NC + flt_startdate.isoformat()[:10] + '/Forecast/'
+            if not os.path.isdir(PATH_ECHOTOP_FORE_DATE):
+                print('ERR: No EchoTop Forecast Data for ', file)
+                continue
+            fore_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
+                                  calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_FORE_DATE)]
+        if USES_CURRENT:
+            PATH_ECHOTOP_CUR_DATE = PATH_ECHOTOP_NC + flt_startdate.isoformat()[:10] + '/Current/'
+            if not os.path.isdir(PATH_ECHOTOP_CUR_DATE):
+                print('ERR: No EchoTop Current Data for ', file)
+                continue
+            cur_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
+                                    calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_CUR_DATE)]
 
-        et_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
-                                  calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_FLIGHTDATE)]
 
         # Create Basemap, plot on Latitude/Longitude scale
-
         m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
                     resolution='l', area_thresh=1000., projection='lcc',
                     lat_0=gb.LAT_ORIGIN, lon_0=gb.LON_ORIGIN)
@@ -76,21 +81,30 @@ for dir in dirs:
         weather_cubes_lon = np.array([], dtype=float)
         weather_cubes_et = np.array([], dtype=float)
 
+        sttime = datetime.datetime.now()
         print('Data Collection Begin\t', str(datetime.datetime.now()))
         for i in range(START_POS, len(flight_tr[:, ]) - 1):
 
             # Open EchoTop File Covering the Current Time
-            idx_relevant_et = np.argmin((flt_time[i]) % et_timestamps)
-            PATH_RELEVANT_ET = PATH_ECHOTOP_FLIGHTDATE + os.listdir(PATH_ECHOTOP_FLIGHTDATE)[idx_relevant_et]
-            relevant_rootgrp = Dataset(PATH_RELEVANT_ET, 'r', type='NetCDF4')
-            if gb.BLN_USE_FORECAST:
-                idx_time = np.argmin(relevant_rootgrp.variables['time'] % (flt_time[i] + gb.LOOKAHEAD_SECONDS))
-                relevant_et = relevant_rootgrp.variables['ECHO_TOP'][idx_time][0]
-                activetime = relevant_rootgrp.variables['time'][idx_time]
-            else:
-                relevant_et = relevant_rootgrp.variables["ECHO_TOP"][0][0]
-            relevant_et._set_mask(False)
-            relevant_rootgrp.close()
+            relevant_et = np.zeros((len(gb.LOOKAHEAD_SECONDS),len(et_lat),len(et_lon)),dtype=float)
+            forecast_start = 0
+            if USES_CURRENT:
+                idx_cur_et = np.argmin((flt_time[i]) % cur_timestamps)
+                PATH_ECHOTOP_CUR = PATH_ECHOTOP_CUR_DATE + os.listdir(PATH_ECHOTOP_CUR_DATE)[idx_cur_et]
+                et_cur_rootgrp = Dataset(PATH_ECHOTOP_CUR, 'r', format='NetCDF4')
+                et_cur_rootgrp.variables['ECHO_TOP'].set_auto_mask(False)
+                relevant_et[0] = et_cur_rootgrp.variables['ECHO_TOP'][0][0]
+                et_cur_rootgrp.close()
+                forecast_start += 1
+            if USES_FORECAST:
+                idx_fore_et = np.argmin(flt_time[i] % fore_timestamps)
+                PATH_ECHOTOP_FORE = PATH_ECHOTOP_FORE_DATE + os.listdir(PATH_ECHOTOP_FORE_DATE)[idx_fore_et]
+                et_fore_rootgrp = Dataset(PATH_ECHOTOP_FORE, 'r', format='NETCDF4')
+                et_fore_rootgrp.variables['ECHO_TOP'].set_auto_mask(False)
+                for t in range(forecast_start, len(gb.LOOKAHEAD_SECONDS)):
+                    idx_time = np.argmin(et_fore_rootgrp.variables['time'] % (flt_time[i] + gb.LOOKAHEAD_SECONDS[t]))
+                    relevant_et[t] = et_fore_rootgrp.variables['ECHO_TOP'][idx_time][0]
+                et_fore_rootgrp.close()
 
             # Heading Projection & Ortho for point
             heading = gb.heading_a_to_b(flt_lon[i], flt_lat[i], flt_lat[i + 1], flt_lon[i + 1])
@@ -144,25 +158,21 @@ for dir in dirs:
                                                                                                 (CUBE_SIZE, 1)).T
             weather_cube_proj[1] = flt_lat[i] + np.tile(centerline_y, (CUBE_SIZE, 1)) + np.tile(centerline_ortho_y,
                                                                                                 (CUBE_SIZE, 1)).T
+            for idx_ in range(0, CUBE_SIZE):
+                for idx_ortho in range(0, CUBE_SIZE):
+                    et_actual_idx_x = np.abs(et_lon - weather_cube_proj[0][idx_][idx_ortho]).argmin()
+                    et_actual_idx_y = np.abs(et_lat - weather_cube_proj[1][idx_][idx_ortho]).argmin()
 
-            a = np.arange(CUBE_SIZE)
-            b = np.arange(CUBE_SIZE)
-            temp_act = np.zeros((2, CUBE_SIZE, CUBE_SIZE), dtype=float)
-            with np.nditer([weather_cube_proj[0].reshape(1, 400), weather_cube_proj[1].reshape(1, 400),
-                            weather_cube_actual[0].reshape(1, 400), weather_cube_actual[1].reshape(1, 400)],
-                           op_flags=[['readonly', 'no_broadcast'], ['readonly', 'no_broadcast'],
-                                     ['writeonly'], ['writeonly']]) as it:
-                for (proj_x, proj_y, act_x, act_y) in it:
-                    et_actual_idx_x = np.abs(et_lon - proj_x).argmin()
-                    et_actual_idx_y = np.abs(et_lat - proj_y).argmin()
-                    act_x[...] = et_lon[et_actual_idx_x]
-                    act_y[...] = et_lat[et_actual_idx_y]
+                    weather_cube_actual[0][idx_][idx_ortho] = et_lon[et_actual_idx_x]
+                    weather_cube_actual[1][idx_][idx_ortho] = et_lat[et_actual_idx_y]
+                    for t in range(0,len(gb.LOOKAHEAD_SECONDS)):
+                        weather_cube_et[idx_][idx_ortho] = relevant_et[t][et_actual_idx_y][et_actual_idx_x]
 
             # Print the max Error between cube points
             err = np.abs(weather_cube_actual - weather_cube_proj)
             err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
             print("Max Distance Err:\t", "{:10.4f}".format(err_dist.flatten()[err_dist.argmax()]), "\t", str(i+1), ' / ',
-                  len(flight_tr[:, 1] - 1), '\t', num2date(activetime, units='Seconds since 1970-01-01T00:00:00',
+                  len(flight_tr[:, 1] - 1), '\t', num2date(flt_time[i], units='Seconds since 1970-01-01T00:00:00',
                                                            calendar='gregorian').isoformat())
 
             # Append current cube to list of data
@@ -170,7 +180,6 @@ for dir in dirs:
             weather_cubes_lon = np.append(weather_cubes_lon, weather_cube_actual[0])
             weather_cubes_et = np.append(weather_cubes_et, weather_cube_et)
             weather_cubes_time = np.append(weather_cubes_time, flt_time[i])
-
 
         # Verification: Plot collected cubes v. actual flight points
 
@@ -186,7 +195,7 @@ for dir in dirs:
         # reshape and write to NetCDF
         weather_cubes_lat = weather_cubes_lat.reshape(-1, CUBE_SIZE * CUBE_SIZE)
         weather_cubes_lon = weather_cubes_lon.reshape(-1, CUBE_SIZE * CUBE_SIZE)
-        weather_cubes_et = weather_cube_et.reshape(-1, CUBE_SIZE * CUBE_SIZE)
+        weather_cubes_et = weather_cubes_et.reshape(-1, CUBE_SIZE * CUBE_SIZE)
 
         PATH_NC_FILENAME = PATH_OUTPUT_CUBES + flt_startdate.isoformat()[:10] + '/' + file.split('.')[0] + '.nc'
         if (not os.listdir(PATH_OUTPUT_CUBES).__contains__(flt_startdate.isoformat()[:10])):
@@ -225,4 +234,6 @@ for dir in dirs:
         cubes_rootgrp.close()
     os.chdir('..')
 os.chdir(gb.PATH_PROJECT)
-print('done', datetime.datetime.now())
+edtime = datetime.datetime.now()
+delta = edtime - sttime
+print('done:\t', str(delta.total_seconds()))

@@ -8,7 +8,7 @@ LAT_ORIGIN = 38.
 LON_ORIGIN = -98.
 R_EARTH = 6370997
 # TODO: control multiple lookahead values
-LOOKAHEAD_SECONDS = 200.
+LOOKAHEAD_SECONDS = [0.]
 BLN_USE_FORECAST = True
 PROCESS_MAX = 4
 
