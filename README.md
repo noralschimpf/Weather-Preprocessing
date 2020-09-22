@@ -27,8 +27,9 @@ The Python Scripts are written to be run in stages for each data-type, leading u
 Generating flight files requires access to a database of Integrated Flight Format (IFF) entries. Once available, the program in `Track_Gen_C-files` may be compiled to generate the appropriate flight plan (`_fp.txt.`) and track-point (`_trk.txt`) files.
 Flight-plan and track-point CSV's may be dropped directly into `Data/IFF_Flight_Plans` and `Data/IFF_Track_Points` respectively. 
 * `IFF_Track_Point_Prep.py` should be executed first. It will downsample the number of track-point entries and save the track-points into directores sorted by-date using the first available timestamp. Processed Track points will be saved to `Data/IFF_Track_Points/Sorted/`
-* `IFF_Flight_Plan_Prep.py` May then be executed. It will parse the initially-reported waypoints and navaids into their latitude and longitude coordinates by querying [OpenNav](https://opennav.com/). These will be interpolated and, if possible, assigned a timestamp from the flight's track point file. 
+* `IFF_Flight_Plan_Prep.py` May then be executed. It will parse the initially-reported waypoints and navaids into their latitude and longitude coordinates by querying [OpenNav](https://opennav.com/). These will be assigned a timestamp from the flight's track point file, and then interpolated to a target number of samples. 
   * Since OpenNav is queried to find waypoint and navaid coordinates, an internet connection is required for this script.
+ 
 #### Preparing EchoTop Data  
 * Echotop Data is mapped in terms of a relative distance from a reference coordinate. Executing `NC_Data_Prep.py` will convert this mapping into latitude and longitude coordinates, as well as move the file to it's sorted by-date folder, `Data/EchoTop/Sorted`.
   * Much like with the Flight file preparation, EchoTop data should be placed directly in `Data/Echotop/`
