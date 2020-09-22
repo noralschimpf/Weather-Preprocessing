@@ -40,6 +40,7 @@ Flight-plan and track-point CSV's may be dropped directly into `Data/IFF_Flight_
 All Project parameters are located in `Global_Tools.py`
 * `LAT_ORIGIN`, `LON_ORIGIN`: the reference coordinates used by EchoTop databases.
 * `R_EARTH`: The Earth's radius, in Kilometers, used to map relative data to latitude and longitude coordinates. Currently specified for EchoTop data.
+* `CUBE_SIZE`: Specifies the number of points along each spatial dimension to collect for weather cubes. Currently set to 20, following Pang et. al.
 * `LOOKAHEAD_SECONDS`: Number of seconds to extract weather cubes in advance of. **must be a list**. specifying 0 will read EchoTop reported data. Any non-zero value will read from EchoTop forecasts at the expected times for the flight.
 * `TARGET_SAMPLE_SIZE`: Ideal number of entries per flight file. This number is targetted when downsampling track points or interpolating flight plans. Current value is 500, roughly a quarter the number of entries in a flight from JFK to LAX.
 * `FIGURE_FORMAT`: When validation-figures are generated, this specifies the format to save each as. Currently specified as PNG.
@@ -48,15 +49,18 @@ All Project parameters are located in `Global_Tools.py`
   * Tested for 4 processes with 10Gb heap. 
 
 # Future Work
-## Optimization
+### Optimization
 * Generating feature cubes is largely limited by the read-times for netCDF files. Future implementations may move toward loading EchoTop data into SQL databases.
 * Optimization may rely more heavily on Pandas library, and potentially numba
-## NDFD Data
+* Beginning in Python 3.8, memory can be shared between processes without locking or relying on OS-dependent mechanisms. Upgrading to 3.8 will simplify multiprocessing for `Weather_Cubes.py`
+
+  
+### NDFD Data
 The National Weather Service's [National Digital Data Forecast](https://vlab.ncep.noaa.gov/web/mdl/degrib-for-ndfd) contains a breadth of weather data covering North America. Future Data Processing may include these measurements.
 * Batch-Downloading data is being handled in Powershell currently, and requires the installation of [degrib](https://www.weather.gov/mdl/degrib_home).
 * Currently built to consider wind data, intend to use for temperature
 
-## NDFD Weather Cubes
+### NDFD Weather Cubes
 * Anticipating NDFD data to vary by altitude. Weather cube generation will rely on matched-tree querying, described in: 
  >   Predicting Aircraft Trajectories: A Deep Generative Convolutional Recurrent Neural Networks Approach  
  >   Yulin Liu and Mark Hansen, 2018   
