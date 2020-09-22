@@ -8,8 +8,7 @@ LAT_ORIGIN = 38.
 LON_ORIGIN = -98.
 R_EARTH = 6370997
 # TODO: control multiple lookahead values
-LOOKAHEAD_SECONDS = [0., 300.]
-
+LOOKAHEAD_SECONDS = [0.]
 
 # Path / Project Vars
 TARGET_SAMPLE_SIZE = 500
@@ -57,6 +56,35 @@ def heading_a_to_b(a_lon, a_lat, b_lon, b_lat, spherical=True):
         theta = math.atan2(delta_y, delta_x)
         heading = (90 - theta * 180 / math.pi) % 360
     return heading
+
+
+'''
+Haversine formula calculates the as-the-crow-flies distance between two coordinates
+return unit: kilometers
+equation ref: https://www.movable-type.co.uk/scripts/latlong.html
+'''
+
+
+def haversine(lat2, lat1, delta_lons, rEarth):
+    lat2, lat1, delta_lons = np.radians([lat2, lat1, delta_lons])
+    a = math.sin((lat2 - lat1) / 2) ** 2 + (math.cos(lat1) * math.cos(lat2) * (math.sin(delta_lons / 2) ** 2))
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return rEarth * c / 1000
+
+
+'''
+Parses an array of latitudes and longitudes
+Returns an array of distances from the first lat/lon coordinate provided
+calculates using the Haversine formula
+'''
+
+
+def km_between_coords(lats, lons):
+    leng = min(len(lats), len(lons))
+    dists = np.zeros(leng)
+    for i in range(1, leng):
+        dists[i] = haversine(lats[i], lats[0], lons[i] - lons[0], R_EARTH)
+    return dists
 
 
 """

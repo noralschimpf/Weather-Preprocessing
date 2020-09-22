@@ -20,7 +20,6 @@ def main():
             flt_time = flight_tr[:, 0]
             flt_lat = flight_tr[:, 1]
             flt_lon = flight_tr[:, 2]
-            flt_alt = flight_tr[:, 3]
 
             relevant_et = np.zeros((len(gb.LOOKAHEAD_SECONDS), len(et_lat), len(et_lon)), dtype=float)
             idx_cur_et, idx_forecast_times = None, [-1] * (len(gb.LOOKAHEAD_SECONDS)-forecast_start)
@@ -230,7 +229,7 @@ if __name__ == '__main__':
     # open sample Trajectory and Echotop data
     CUBE_SIZE = 20
     START_POS = 0
-    PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
+    PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Flight_Plans/Sorted/'
     PATH_ECHOTOP_NC = gb.PATH_PROJECT + '/Data/EchoTop/Sorted/'
     PATH_ECHOTOP_FILE = PATH_ECHOTOP_NC + '2020-06-22/Current/ciws.EchoTop.20200622T230000Z.nc'
     PATH_TEMP_DATA = gb.PATH_PROJECT + '/Data/TMP_200mb.txt'
@@ -248,7 +247,6 @@ if __name__ == '__main__':
     if USES_CURRENT: forecast_start = 1
     else: forecast_start = 0
 
-    PATH_COORDS = PATH_COORDS.replace('Sorted', 'Shifted')
     os.chdir(PATH_COORDS)
     duration = main()
     print('done:\t', str(duration.total_seconds()))

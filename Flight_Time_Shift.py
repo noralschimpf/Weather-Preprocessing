@@ -1,15 +1,11 @@
 import os
 import numpy as np
-import matplotlib.pyplot as plt
 from datetime import datetime
-from mpl_toolkits.basemap import Basemap, addcyclic
-from scipy.ndimage.filters import minimum_filter, maximum_filter
-from matplotlib import dates, cm
-from netCDF4 import Dataset, num2date
+from netCDF4 import num2date
 import Global_Tools as gb
 
 # Shift Flight Track-Point to a New Start-Time
-PATH_FILES_TO_SHIFT = gb.PATH_PROJECT + '/Data/IFF_Track_Points/'
+PATH_FILES_TO_SHIFT = gb.PATH_PROJECT + '/Data/IFF_Flight_Plans'
 TIME_START_TARGET = datetime(year=2018, month=11, day=4, hour=18, minute=00)
 
 os.chdir(PATH_FILES_TO_SHIFT)
@@ -37,4 +33,4 @@ for file in files:
 
     new_data = np.vstack((times, lats, lons, alts)).T
 
-    gb.save_csv_by_date(PATH_FILES_TO_SHIFT + '/Shifted/', start_time, new_data, file)
+    gb.save_csv_by_date(PATH_FILES_TO_SHIFT + '/Shifted/', start_time, new_data, file, bool_delete_original=True)
