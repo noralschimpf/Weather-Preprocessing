@@ -38,7 +38,7 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
             return -1
         cur_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
                                    calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_CUR_DATE)]
-
+    '''
     # Create Basemap, plot on Latitude/Longitude scale
     m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
                 resolution='l', area_thresh=1000., projection='lcc',
@@ -51,6 +51,7 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
     m.drawparallels(Parallels, labels=[False, True, True, False])
     m.drawmeridians(Meridians, labels=[True, False, False, True])
     fig2 = plt.gca()
+    '''
 
     # Closest-Approximation - From EchoTop
     weather_cubes_time = np.array([], dtype=float)
@@ -58,9 +59,8 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
     weather_cubes_lon = np.array([], dtype=float)
     weather_cubes_et = np.array([], dtype=float)
 
-    sttime = datetime.datetime.now()
     print('Data Collection Begin\t', str(datetime.datetime.now()))
-    for i in range(len(flight_tr[:, ]) - 1):
+    for i in range(len(flight_tr[:, ])):
 
         # Open EchoTop File Covering the Current Time
         if USES_CUR:
@@ -87,7 +87,10 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
             et_fore_rootgrp.close()
 
         # Heading Projection & Ortho for point
-        heading = gb.heading_a_to_b(flt_lon[i], flt_lat[i], flt_lat[i + 1], flt_lon[i + 1])
+        if i==len(flt_time[:])-1:
+            heading = gb.heading_a_to_b(flt_lon[i-1], flt_lat[i-1], flt_lat[i], flt_lon[i])
+        else:
+            heading = gb.heading_a_to_b(flt_lon[i], flt_lat[i], flt_lat[i + 1], flt_lon[i + 1])
         heading_ortho = (heading + 90) % 360
         theta = math.radians(heading - 90)
         theta_ortho = math.radians(heading_ortho - 90)
@@ -155,8 +158,7 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
         err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
         maxerr = err_dist.flatten()[err_dist.argmax()]
         print("Max Distance Err:\t", "{:10.4f}".format(maxerr), "\t", str(i + 1),
-              ' / ',
-              len(flight_tr[:, 1] - 1), '\t', file.split('/')[-1])
+              ' / ', len(flight_tr[:, 1] - 1), '\t', file.split('/')[-1])
 
         # Append current cube to list of data
         weather_cubes_lat = np.append(weather_cubes_lat, weather_cube_actual[1])
@@ -164,8 +166,8 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
         weather_cubes_et = np.append(weather_cubes_et, weather_cube_et)
         weather_cubes_time = np.append(weather_cubes_time, flt_time[i])
 
+    '''
     # Verification: Plot collected cubes v. actual flight points
-
     m.scatter(weather_cubes_lon, weather_cubes_lat, marker=',', color='blue', latlon=True)
     m.scatter(flight_tr[:, 2], flight_tr[:, 1], marker=',', color='red', latlon=True)
     plt.show(block=False)
@@ -173,13 +175,16 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
                              + flt_startdate.isoformat().replace(':', '_') + '.' + gb.FIGURE_FORMAT
     plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)
     plt.close()
+    '''
 
     # reshape and write to NetCDF
     weather_cubes_lat = weather_cubes_lat.reshape(-1, gb.CUBE_SIZE * gb.CUBE_SIZE)
     weather_cubes_lon = weather_cubes_lon.reshape(-1, gb.CUBE_SIZE * gb.CUBE_SIZE)
     weather_cubes_et = weather_cubes_et.reshape(-1, gb.CUBE_SIZE * gb.CUBE_SIZE)
 
-    PATH_NC_FILENAME = PATH_OUTPUT + flt_startdate.isoformat()[:10] + '/' + file.split('.')[0] + '.nc'
+    file_local = file.split('/')[-1]
+    PATH_NC_FILENAME = PATH_OUTPUT + flt_startdate.isoformat()[:10] + '/' + file_local.split('.')[0] + '.nc'
+    print('WRITING TO:\t', PATH_NC_FILENAME)
     if (not os.listdir(PATH_OUTPUT).__contains__(flt_startdate.isoformat()[:10])):
         os.mkdir(PATH_OUTPUT + flt_startdate.isoformat()[:10])
     cubes_rootgrp = Dataset(PATH_NC_FILENAME, 'w', type='NetCDF4')
