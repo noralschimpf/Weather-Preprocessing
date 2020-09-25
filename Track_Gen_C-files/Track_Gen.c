@@ -31,9 +31,11 @@
 
 #define PLAN_WAYPOINTS		18
 
-#define	FLIGHT_SUMMARY		'2'
-#define	TRACK_POINT			'3'
-#define	FLIGHT_PLAN			'4'
+#define	FLIGHT_SUMMARY		"2"
+#define	TRACK_POINT			"3"
+#define	FLIGHT_PLAN			"4"
+
+#define SIZE_STR			2000
 
 // This function searches through character array s, and retrieves a character array t, based on the provided
 // delimiter character and position.
@@ -51,7 +53,7 @@ void get_token(char *s, char *t, char delim, int position, int MAX_LEN) {
 	}
 	t[j] = '\0';
 	if(!strcmp(t, "?"))
-		strcpy(t, "Unknown");
+		strcpy_s(t, sizeof("Unknown"),"Unknown");
 	//if(position == PLAN_WAYPOINTS) {printf("%s",t);}
 }
 
@@ -101,10 +103,11 @@ void close_and_exit(int code, FILE* fpsource,FILE *fpdest_track, FILE *fpdest_pl
 
 int main() {
 	FILE *fpsource, *fpdest_track, *fpdest_plan, *fpdest_KML_track, *fpdest_KML_plan, *fpstatus;
+	FILE **fppsource, **fppdest_track, **fppdest_plan, **fppdest_KML_track, **fppdest_KML_plan, **fppstatus;
 	int found_match = 0, track_point_count = 0, cnt = 0, flight_plan_count = 0;
 	double alt_value = 0.0;
-	char str[500], orig[20], dest[20], key[20];
-	char ac_lat[20], ac_long[20], ac_alt[20], time_stamp[20], ac_id[20], ac_gnd_spd[20], ac_course[20], waypoints[200];
+	char str[SIZE_STR], orig[20], dest[20], key[20], entry[20];
+	char ac_lat[20], ac_long[20], ac_alt[20], time_stamp[20], ac_id[20], ac_gnd_spd[20], ac_course[20], waypoints[20000];
 	char dest_path_track_point[200], dest_path_KML_flight_plan[200],dest_path_flight_plan[200], dest_path_KML_track_point[200];
 
 	// Set the source file path
@@ -113,15 +116,13 @@ int main() {
 
 	// Set the status file path; this txt file provides a summary of what was found in the search. It includes the record number, origin airport, and destination airport
 //	const char *status_path = "C:\\Users\\eknobloc\\Desktop\\Autonomous Spectrum Study\\Data Engineering\\IFF Flight Track\\IFF_Track_Summary.txt";
-	const char *status_path = "C:\\Users\\natha\\Desktop\\IFF_Data\\2019-06-10\\IFF_Track_Summary.txt";
-
+	const char *status_path = "C:\\Users\\natha\\Desktop\\IFF_Data\\IFF_Track_Summary.txt";
 	// Set the output file path headers for the txt file and KML file; the file name will be appended with the origin airport, destination airport and aircraft ID
 //	char dest_path_header[] = "C:\\Users\\eknobloc\\Desktop\\Autonomous Spectrum Study\\Data Engineering\\IFF Flight Track\\Flight_Track_";
-	char dest_path_header[] = "C:\\Users\\natha\\Desktop\\IFF_Data\\2019-06-10\\Flight_Track";
-
+	char dest_path_header[] = "C:\\Users\\natha\\Desktop\\IFF_Data\\Flight_Track";
 	// Set the desired origin airport and desired destination airport; always include the terminating '\0' at the end of the string
-	char desired_orig[] = "KJFK\0";
-	char desired_dest[] = "KLAX\0";
+	char desired_orig[] = "KLAX\0";
+	char desired_dest[] = "KJFK\0";
 
 
 	// Open source IFF source file; terminate if file error
@@ -140,13 +141,21 @@ int main() {
 
 	// Parse through IFF file to retrieve entries from the IFF CSV file (e.g., desired latitude, longitude, and altitude)
 	// From those retrieve entries, generate an output string that contains those values and write to the destination file
-	while(fgets(str, 200, fpsource) != NULL) {
+	while (fgets(str, SIZE_STR, fpsource) != NULL) {
 
 		// Provide a status update on file processing
-		if (++cnt % 10000 == 0)
+		if (++cnt % 10000 == 0) {
+		printf("Processing %d entries...\r", cnt);}
+		if ((cnt >= 2460000) && (cnt % 1000 == 0)) {
 			printf("Processing %d entries...\r", cnt);
+			if ((cnt >= 2469000) && (cnt % 100 == 0)) {
+				printf("Processing %d entries...\r", cnt);
+			}
+		}
+		
+		get_token(str, entry, ',', TRK_RECORD_TYPE, SIZE_STR);
 
-		if(str[0] == FLIGHT_SUMMARY) {
+		if(!strcmp(entry, FLIGHT_SUMMARY)) {
 			// New record has been found
 			track_point_count = 0;
 			flight_plan_count = 0;
@@ -169,63 +178,63 @@ int main() {
 			}
 
 			// Retrieve origin airport
-			get_token(str, orig, ',', SUM_ORIG, 200);
+			get_token(str, orig, ',', SUM_ORIG, SIZE_STR);
 
 			// Retrieve destination airport
-			get_token(str, dest, ',', SUM_DEST, 200);
+			get_token(str, dest, ',', SUM_DEST, SIZE_STR);
 
 			if(!strcmp(orig, desired_orig) && !strcmp(dest, desired_dest)) {
-				get_token(str, key, ',', SUM_RECORD_KEY, 200);
+				get_token(str, key, ',', SUM_RECORD_KEY, 2000);
 				fprintf(fpstatus, "Match found: Record #: %s, Origin: %s, Destination: %s\n", key, orig, dest);
 				found_match = 1;
 			}
 		}
-		if(str[0] == TRACK_POINT && found_match == 1) {
+		if(!(strcmp(entry, TRACK_POINT)) && found_match == 1) {
 
 			// get time stamp
-			get_token(str, time_stamp, ',', TRK_TIME_STAMP, 200);
+			get_token(str, time_stamp, ',', TRK_TIME_STAMP, SIZE_STR);
 
 			// get aircraft ID
-			get_token(str, ac_id, ',', TRK_AC_ID, 200);
+			get_token(str, ac_id, ',', TRK_AC_ID, SIZE_STR);
 
 			// get longitude
-			get_token(str, ac_long, ',', TRK_AC_LONG, 200);
+			get_token(str, ac_long, ',', TRK_AC_LONG, SIZE_STR);
 
 			// get latitude
-			get_token(str, ac_lat, ',', TRK_AC_LAT, 200);
+			get_token(str, ac_lat, ',', TRK_AC_LAT, SIZE_STR);
 
 			// get the flight level string and convert to float, multiply * 100, and convert back to string
-			get_token(str, ac_alt, ',', TRK_AC_ALT, 200);
+			get_token(str, ac_alt, ',', TRK_AC_ALT, SIZE_STR);
 			alt_value = strtod(ac_alt, NULL);
 			alt_value *= 100;
 			sprintf(ac_alt, "%d", (int) alt_value);
 
 			// get aircraft ground speed
-			get_token(str, ac_gnd_spd, ',', TRK_AC_GND_SPD, 200);
+			get_token(str, ac_gnd_spd, ',', TRK_AC_GND_SPD, SIZE_STR);
 
 			// get aircraft course
-			get_token(str, ac_course, ',', TRK_AC_COURSE, 200);
+			get_token(str, ac_course, ',', TRK_AC_COURSE, SIZE_STR);
 			
 			//If first track point of the flight
 			if(!track_point_count++) {
 				// Format the output file name, includes: origin, destination, aircraft ID
-				strcpy(dest_path_track_point, dest_path_header);
-				strcpy(dest_path_KML_track_point, dest_path_header);
+				strcpy_s(dest_path_track_point, sizeof(dest_path_track_point),dest_path_header);
+				strcpy_s(dest_path_KML_track_point, sizeof(dest_path_KML_track_point),dest_path_header);
 
-				strcat(dest_path_track_point, desired_orig);
-				strcat(dest_path_track_point, "_");
-				strcat(dest_path_track_point, desired_dest);
-				strcat(dest_path_track_point, "_");
+				strcat_s(dest_path_track_point, sizeof(dest_path_track_point), desired_orig);
+				strcat_s(dest_path_track_point, sizeof(dest_path_track_point), "_");
+				strcat_s(dest_path_track_point, sizeof(dest_path_track_point), desired_dest);
+				strcat_s(dest_path_track_point, sizeof(dest_path_track_point), "_");
 
-				strcat(dest_path_KML_track_point, desired_orig);
-				strcat(dest_path_KML_track_point, "_");
-				strcat(dest_path_KML_track_point, desired_dest);
-				strcat(dest_path_KML_track_point, "_");
+				strcat_s(dest_path_KML_track_point, sizeof(dest_path_KML_track_point), desired_orig);
+				strcat_s(dest_path_KML_track_point, sizeof(dest_path_KML_track_point), "_");
+				strcat_s(dest_path_KML_track_point, sizeof(dest_path_KML_track_point), desired_dest);
+				strcat_s(dest_path_KML_track_point, sizeof(dest_path_KML_track_point), "_");
 
-				strcat(dest_path_track_point, ac_id);
-				strcat(dest_path_track_point, "_trk.txt");
-				strcat(dest_path_KML_track_point, ac_id);
-				strcat(dest_path_KML_track_point, "_trk.kml");
+				strcat_s(dest_path_track_point, sizeof(dest_path_track_point), ac_id);
+				strcat_s(dest_path_track_point, sizeof(dest_path_track_point), "_trk.txt");
+				strcat_s(dest_path_KML_track_point, sizeof(dest_path_KML_track_point), ac_id);
+				strcat_s(dest_path_KML_track_point, sizeof(dest_path_KML_track_point), "_trk.kml");
 
 				// Open destination KML file
 				fpdest_KML_track = fopen(dest_path_KML_track_point, "w");
@@ -250,36 +259,36 @@ int main() {
 			fprintf(fpdest_track, "%s,%s,%s,%s,%s,%s,%s\n", ac_id, time_stamp, ac_lat, ac_long, ac_alt, ac_gnd_spd, ac_course);
 
 		}
-		if(str[0] == FLIGHT_PLAN && found_match == 1) {
+		if(!(strcmp(entry, FLIGHT_PLAN)) && found_match == 1) {
 			// get time stamp
-			get_token(str, time_stamp, ',', TRK_TIME_STAMP, 500);
+			get_token(str, time_stamp, ',', TRK_TIME_STAMP, SIZE_STR);
 			// get aircraft ID
-			get_token(str, ac_id, ',', TRK_AC_ID, 500);
+			get_token(str, ac_id, ',', TRK_AC_ID, SIZE_STR);
 			//get flight ID
-			get_token(str, key, ',', TRK_RECORD_KEY,500);
+			get_token(str, key, ',', TRK_RECORD_KEY, SIZE_STR);
 			// get Waypoints
-			get_token(str, waypoints, ',', PLAN_WAYPOINTS, 500);
+			get_token(str, waypoints, ',', PLAN_WAYPOINTS, SIZE_STR);
 				
 			//If first flight plan entry of the flight
 			if(!flight_plan_count++) {
 				// Format the output file name, includes: origin, destination, aircraft ID
-				strcpy(dest_path_flight_plan, dest_path_header);
-				strcpy(dest_path_KML_flight_plan, dest_path_header);
+				strcpy_s(dest_path_flight_plan, sizeof(dest_path_flight_plan), dest_path_header);
+				strcpy_s(dest_path_KML_flight_plan, sizeof(dest_path_KML_flight_plan), dest_path_header);
 
-				strcat(dest_path_flight_plan, desired_orig);
-				strcat(dest_path_flight_plan, "_");
-				strcat(dest_path_flight_plan, desired_dest);
-				strcat(dest_path_flight_plan, "_");
+				strcat_s(dest_path_flight_plan, sizeof(dest_path_flight_plan), desired_orig);
+				strcat_s(dest_path_flight_plan, sizeof(dest_path_flight_plan), "_");
+				strcat_s(dest_path_flight_plan, sizeof(dest_path_flight_plan), desired_dest);
+				strcat_s(dest_path_flight_plan, sizeof(dest_path_flight_plan), "_");
 
-				strcat(dest_path_KML_flight_plan, desired_orig);
-				strcat(dest_path_KML_flight_plan, "_");
-				strcat(dest_path_KML_flight_plan, desired_dest);
-				strcat(dest_path_KML_flight_plan, "_");
+				strcat_s(dest_path_KML_flight_plan, sizeof(dest_path_KML_flight_plan), desired_orig);
+				strcat_s(dest_path_KML_flight_plan, sizeof(dest_path_KML_flight_plan), "_");
+				strcat_s(dest_path_KML_flight_plan, sizeof(dest_path_KML_flight_plan), desired_dest);
+				strcat_s(dest_path_KML_flight_plan, sizeof(dest_path_KML_flight_plan), "_");
 
-				strcat(dest_path_flight_plan, ac_id);
-				strcat(dest_path_flight_plan, "_fp.txt");
-				strcat(dest_path_KML_flight_plan, ac_id);
-				strcat(dest_path_KML_flight_plan, "_fp.kml");
+				strcat_s(dest_path_flight_plan, sizeof(dest_path_flight_plan), ac_id);
+				strcat_s(dest_path_flight_plan, sizeof(dest_path_flight_plan), "_fp.txt");
+				strcat_s(dest_path_KML_flight_plan, sizeof(dest_path_KML_flight_plan), ac_id);
+				strcat_s(dest_path_KML_flight_plan, sizeof(dest_path_KML_flight_plan), "_fp.kml");
 
 				// Open destination KML file
 				fpdest_KML_plan = fopen(dest_path_KML_flight_plan, "w");
