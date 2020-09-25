@@ -6,13 +6,9 @@ Preprocessing scripts for CIWS EchoTop Data, following:
 # Using the Repo
 
 ## Environment
-Project was developed in Pycharm, using Python 3.6. A list of used libraries is provided, as well as the exported Anaconda environment (*environment.yml*)
-* matplotlib
-  * basemap
-* beautifulsoup4
-* numpy
-* pandas
-* requests
+Project was developed using a combination of PyCharm, Microsoft Visual Studio, and Microsoft Powershell ISE.
+
+
 
 #### PyCharm Environment
 Project was developed and tested using PyCharm 2020.1. If using PyCharm, it is strongly encouraged to disable indexing and Windows Defender scanning of the data directory.
@@ -20,14 +16,26 @@ Project was developed and tested using PyCharm 2020.1. If using PyCharm, it is s
 * When PyCharm is first started, it will display a pop-up to disable Windows Defender Scanning (`Windows Defender might be impacting your build and IDE performance. PyCharm checked the following directories:`)
   * Running the linked script (`elevator.exe`) will disable this permanently, despite the pop-up reapperaing with session launches.
   * alternatively, in windows settings: `Virus and threat protection settings` | `add or remove exclusions` | `add exclusion` and point to the data directory in this project.
+
+The project interpreter was built as an Anaconda environment, using Python 3.6. A list of used libraries is provided, as well as the exported Anaconda environment (*environment.yml*)
+* matplotlib
+  * basemap
+* beautifulsoup4
+* numpy
+* pandas
+* requests
+
+## Visual Studio Environment
+`Track_Gen.c` was modified, debugged, and compiled using Microsoft Visual Studio 2019, with all build attributes specified in the source. 
 ## Project Execution
 The Python Scripts are written to be run in stages for each data-type, leading up to the generation of weather cubes.
 
 #### Preparing Flight Files
-Generating flight files requires access to a database of Integrated Flight Format (IFF) entries. Once available, the program in `Track_Gen_C-files` may be compiled to generate the appropriate flight plan (`_fp.txt.`) and track-point (`_trk.txt`) files.
-Flight-plan and track-point CSV's may be dropped directly into `Data/IFF_Flight_Plans` and `Data/IFF_Track_Points` respectively. 
+Generating flight files requires access to a database of Integrated Flight Format (IFF) entries. 
+* Once available, the program in `Track_Gen_C-files` should be modified to match the local source and destination file locations.
+ Compiling and running the program will generate the appropriate flight plan (`_fp.txt.`) and track-point (`_trk.txt`) files. Flight-plan and track-point CSV's may be dropped directly into `Data/IFF_Flight_Plans` and `Data/IFF_Track_Points` respectively. 
 * `IFF_Track_Point_Prep.py` should be executed first. It will downsample the number of track-point entries and save the track-points into directores sorted by-date using the first available timestamp. Processed Track points will be saved to `Data/IFF_Track_Points/Sorted/`
-* `IFF_Flight_Plan_Prep.py` May then be executed. It will parse the initially-reported waypoints and navaids into their latitude and longitude coordinates by querying [OpenNav](https://opennav.com/). These will be assigned a timestamp from the flight's track point file, and then interpolated to a target number of samples. 
+* `IFF_Flight_Plan_Prep.py` May then be executed. It will parse the initially-reported waypoints and navaids into their latitude and longitude coordinates by querying [OpenNav](https://opennav.com/). These will be assigned a timestamp from the flight's matching track point file, and then interpolated to a target number of samples. 
   * Since OpenNav is queried to find waypoint and navaid coordinates, an internet connection is required for this script.
  
 #### Preparing EchoTop Data  
@@ -60,8 +68,6 @@ All Project parameters are located in `Global_Tools.py`
 The National Weather Service's [National Digital Data Forecast](https://vlab.ncep.noaa.gov/web/mdl/degrib-for-ndfd) contains a breadth of weather data covering North America. Future Data Processing may include these measurements.
 * Batch-Downloading data is being handled in Powershell currently, and requires the installation of [degrib](https://www.weather.gov/mdl/degrib_home).
 * Currently built to consider wind data, intend to use for temperature
-
-### NDFD Weather Cubes
 * Anticipating NDFD data to vary by altitude. Weather cube generation will rely on matched-tree querying, described in: 
  >   Predicting Aircraft Trajectories: A Deep Generative Convolutional Recurrent Neural Networks Approach  
  >   Yulin Liu and Mark Hansen, 2018   
