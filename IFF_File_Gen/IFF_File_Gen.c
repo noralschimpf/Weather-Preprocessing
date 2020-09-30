@@ -1,17 +1,15 @@
 /*
- * IFF_Flight_Track_Gen.c
+ * IFF_File_Gen.c
  *
  *  Created on: Aug 4, 2020
  *      Author: eknobloc
+ *      Modified: ntschi01
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
-#pragma warning(disable : 4996)
-#pragma warning(disable : 4703)
 
 #define	TRK_RECORD_TYPE		1
 #define	TRK_TIME_STAMP		2
@@ -103,7 +101,6 @@ void close_and_exit(int code, FILE* fpsource,FILE *fpdest_track, FILE *fpdest_pl
 
 int main() {
 	FILE *fpsource, *fpdest_track, *fpdest_plan, *fpdest_KML_track, *fpdest_KML_plan, *fpstatus;
-	FILE **fppsource, **fppdest_track, **fppdest_plan, **fppdest_KML_track, **fppdest_KML_plan, **fppstatus;
 	int found_match = 0, track_point_count = 0, cnt = 0, flight_plan_count = 0;
 	double alt_value = 0.0;
 	char str[SIZE_STR], orig[20], dest[20], key[20], entry[20];
@@ -146,12 +143,6 @@ int main() {
 		// Provide a status update on file processing
 		if (++cnt % 10000 == 0) {
 		printf("Processing %d entries...\r", cnt);}
-		if ((cnt >= 2460000) && (cnt % 1000 == 0)) {
-			printf("Processing %d entries...\r", cnt);
-			if ((cnt >= 2469000) && (cnt % 100 == 0)) {
-				printf("Processing %d entries...\r", cnt);
-			}
-		}
 		
 		get_token(str, entry, ',', TRK_RECORD_TYPE, SIZE_STR);
 

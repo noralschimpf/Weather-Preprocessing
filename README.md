@@ -6,7 +6,7 @@ Preprocessing scripts for CIWS EchoTop Data, following:
 # Using the Repo
 
 ## Environment
-Project was developed using a combination of PyCharm, Microsoft Visual Studio, and Microsoft Powershell ISE.
+Project was developed using a combination of PyCharm, Eclipse 2020-09, and Microsoft Powershell ISE.
 
 
 
@@ -25,8 +25,8 @@ The project interpreter was built as an Anaconda environment, using Python 3.6. 
 * pandas
 * requests
 
-## Visual Studio Environment
-`Track_Gen.c` was modified, debugged, and compiled using Microsoft Visual Studio 2019, with all build attributes specified in the source. 
+## Eclipse Environment
+`Track_Gen.c` was modified, debugged, and compiled using Eclipse 2020-09 with the [MinGW-w64](https://sourceforge.net/projects/mingw-w64/) compiler. 
 ## Project Execution
 The Python Scripts are written to be run in stages for each data-type, leading up to the generation of weather cubes.
 
