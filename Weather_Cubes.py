@@ -1,7 +1,7 @@
 import Global_Tools as gb
 from Global_Tools import profile
 import numpy as np
-import math, os, datetime
+import math, os, datetime, logging
 from mpl_toolkits.basemap import Basemap
 from matplotlib import pyplot as plt
 from netCDF4 import Dataset, num2date, date2num
@@ -27,14 +27,14 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
     if USES_FORE:
         PATH_ECHOTOP_FORE_DATE = PATH_ECHOTOP_SORTED + flt_startdate.isoformat()[:10] + '/Forecast/'
         if not os.path.isdir(PATH_ECHOTOP_FORE_DATE):
-            print('ERR: No EchoTop Forecast Data for ', file)
+            logging.error('ERR: No EchoTop Forecast Data for ' + file)
             return -1
         fore_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
                                     calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_FORE_DATE)]
     if USES_CUR:
         PATH_ECHOTOP_CUR_DATE = PATH_ECHOTOP_SORTED + flt_startdate.isoformat()[:10] + '/Current/'
         if not os.path.isdir(PATH_ECHOTOP_CUR_DATE):
-            print('ERR: No EchoTop Current Data for ', file)
+            logging.error('ERR: No EchoTop Current Data for ' + file)
             return -1
         cur_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
                                    calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_CUR_DATE)]
@@ -234,6 +234,7 @@ if __name__ == '__main__':
     PATH_TEMP_DATA = gb.PATH_PROJECT + '/Data/TMP_200mb.txt'
     PATH_OUTPUT_CUBES = gb.PATH_PROJECT + '/Output/Weather Cubes/'
 
+    logging.basicConfig(gb.PATH_PROJECT + '/Output/Weather Cubes/Cube_Gen.log', level=logging.INFO)
     # temp_data = np.loadtxt(PATH_TEMP_DATA)
     echotop_rootgrp = Dataset(PATH_ECHOTOP_FILE + '', delimiter=',', format='NETCDF4')
 
@@ -266,4 +267,5 @@ if __name__ == '__main__':
 
     edtime = datetime.datetime.now()
     duration = edtime - sttime
-    print('done:\t', str(duration.total_seconds()))
+    logging.info('done: ' + edtime.isoformat())
+    logging.info('execution time:' + str(duration.total_seconds()) + ' s')

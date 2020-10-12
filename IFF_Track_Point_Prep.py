@@ -1,4 +1,4 @@
-import os, shutil
+import os, shutil, logging, datetime
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 
@@ -38,8 +38,7 @@ def process_file(PATH_PROJECT : str, TARGET_SAMPLE_SIZE : int, file : str):
 
     times, lats, lons, alts = None, None, None, None
     if (data_slicing_incr <= 0):
-        print('WARNING: ' + str(file) + ' length (' + str(len(data)) + ') is too short for target size ' + str(TARGET_SAMPLE_SIZE))
-        #TODO: Write WARNING to output file
+        logging.warning('WARNING: ' + str(file) + ' length (' + str(len(data)) + ') is too short for target size ' + str(TARGET_SAMPLE_SIZE))
         times = data[:, 0]
         lats = data[:, 1]
         lons = data[:, 2]
@@ -77,9 +76,14 @@ def process_file(PATH_PROJECT : str, TARGET_SAMPLE_SIZE : int, file : str):
 
 if __name__ == '__main__':
     PATH_TRACK_POINTS = gb.PATH_PROJECT + '/data/IFF_Track_Points/'
+    logging.basicConfig(filename=gb.PATH_PROJECT + '/Output/Flight Tracks/FT_Prep.log', level=logging.INFO)
 
     # Open, plot, and downsample each flight-track CSV
     os.chdir(PATH_TRACK_POINTS)
+
+    sttime = datetime.datetime.now()
+    logging.info('Starting: ' + sttime.isoformat())
+
     track_objs = [x for x in os.listdir() if not (x == 'Shifted' or x == 'Sorted')]
     func_process_file = partial(process_file, gb.PATH_PROJECT, gb.TARGET_SAMPLE_SIZE)
 
@@ -112,5 +116,9 @@ if __name__ == '__main__':
         if (len(files) == 0 or (len(files) == 1 and files[0].__contains__('Summary'))):
             shutil.rmtree(dr)
         else:
-            #TODO: LOG
-            print('WARNING: Review ' + str(dr))
+            logging.warning('WARNING: ' + str(dr) + ' may contain unresolved flight tracks')
+
+    edtime = datetime.datetime.now()
+    delta = edtime - sttime
+    logging.info('Done: ' + edtime.isoformat())
+    logging.info('Execution Time: ' + delta.total_seconds())

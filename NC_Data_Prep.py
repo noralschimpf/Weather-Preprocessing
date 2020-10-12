@@ -1,6 +1,6 @@
 from netCDF4 import Dataset, num2date, date2num, MFDataset
 import numpy as np
-import os
+import os, logging
 from mpl_toolkits.basemap import Basemap
 from matplotlib import cm, pyplot as plt
 import Global_Tools as gb
@@ -36,7 +36,7 @@ def process_file(path_et, file):
         SIZE_TIME = 15
         if not file.__contains__('0000Z'):
             rootgrp_orig.close()
-            print('Skipping ', file)
+            logging.info('Skipping ', file)
             return
         time = rootgrp_orig.variables["times"][:15]
         time.units = rootgrp_orig.variables["times"].units
@@ -156,12 +156,16 @@ def process_file(path_et, file):
 
 def main():
     PATH_ECHOTOP_RAW = gb.PATH_PROJECT + '\\Data\\EchoTop\\'
+    logging.basicConfig(filename=gb.PATH_PROJECT + '/Output/EchoTop/ET_Prep.log', level=logging.INFO)
+    sttime = datetime.datetime.now()
+    logging.info('Started: ' + sttime.isoformat())
+
     os.chdir(PATH_ECHOTOP_RAW)
     process_file_partial = partial(process_file, PATH_ECHOTOP_RAW)
     nc_files = [x for x in os.listdir() if x.__contains__('.nc')]
     #for file in nc_files:
     #    process_file_partial(file)
-    starttime = datetime.datetime.now()
+
     with futures.ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
         executor.map(process_file_partial, nc_files)
 
@@ -170,9 +174,12 @@ def main():
     if yndelete.lower() == 'y':
         for file in files_to_delete:
              os.remove(file)
-    endtime = datetime.datetime.now()
-    delta = endtime - starttime
-    print('PROCESSING DONE. Runtime: ', delta.total_seconds(), ' seconds')
+
+    edtime = datetime.datetime.now()
+    delta = edtime - sttime
+    logging.info('completed: ' + edtime.isoformat())
+    logging.info('execution time: ', delta.total_seconds(), ' seconds')
+
     os.chdir(gb.PATH_PROJECT)
 
 

@@ -7,6 +7,7 @@ from netCDF4 import num2date
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import datetime
+import logging
 from mpl_toolkits.basemap import Basemap
 from matplotlib import pyplot as plt
 
@@ -204,7 +205,10 @@ if __name__ == '__main__':
     LEN_AIRPORT = 4
     LEN_NAVAID = 3
     LEN_WAYPOINT = 5
+
+    logging.basicConfig(filename=gb.PATH_PROJECT + '/Output/Flight Plans/FP_Prep.log', level=logging.INFO)
     sttime = datetime.datetime.now()
+    logging.info('Started:\t' + sttime.isoformat())
     os.chdir(PATH_FLIGHT_PLANS)
     data_dirs = [x for x in os.listdir() if not (x == 'Shifted' or x == 'Sorted')]
     for directory in data_dirs:
@@ -230,9 +234,9 @@ if __name__ == '__main__':
         files = os.listdir(dr)
         if len(files) == 0 or (len(files) == 1 and files[0].__contains__('Summary')):
             shutil.rmtree(dr)
-        #else:
-            # TODO: LOG
-            #print('WARNING: Review ' + str(dr))
+        else:
+            logging.warning('WARNING: ' + str(dr) + ' may contain unresolved flight plans')
     edtime = datetime.datetime.now()
     delta = edtime - sttime
-    print('done: ', delta.total_seconds())
+    logging.info('done: ' + edtime.isoformat())
+    logging.info('execution time: ' + delta.total_seconds() + ' s')

@@ -1,0 +1,229 @@
+LOOKAHEAD = [0, 200.], 215 entries
+done:	 253.394711
+Read w/ NetCDF, selective skipping
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    12                                           @profile
+    13                                           def main():
+    14         1       1588.0   1588.0      0.0      dirs = [x for x in os.listdir() if os.path.isdir(x)]
+    15         2        102.0     51.0      0.0      for dir in dirs:
+    16         1        479.0    479.0      0.0          os.chdir(dir)
+    17         2        767.0    383.5      0.0          for file in os.listdir():
+    18                                           
+    19                                                       # Load Flight Data and EchoTop Coordinates
+    20         1      58451.0  58451.0      0.0              flight_tr = np.loadtxt(file, delimiter=',')
+    21         1         65.0     65.0      0.0              flt_time = flight_tr[:, 0]
+    22         1         47.0     47.0      0.0              flt_lat = flight_tr[:, 1]
+    23         1         44.0     44.0      0.0              flt_lon = flight_tr[:, 2]
+    24         1         44.0     44.0      0.0              flt_alt = flight_tr[:, 3]
+    25                                           
+    26         1       5894.0   5894.0      0.0              relevant_et = np.zeros((len(gb.LOOKAHEAD_SECONDS), len(et_lat), len(et_lon)), dtype=float)
+    27         1         53.0     53.0      0.0              idx_cur_et, idx_forecast_times = None, [-1] * (len(gb.LOOKAHEAD_SECONDS)-forecast_start)
+    28                                           
+    29                                                       # Generate list of EchoTop Report Times
+    30         1       2723.0   2723.0      0.0              flt_startdate = num2date(flt_time[0], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
+    31         1         44.0     44.0      0.0              cur_timestamps, fore_timestamps = None, None
+    32         1         41.0     41.0      0.0              if USES_FORECAST:
+    33         1        136.0    136.0      0.0                  PATH_ECHOTOP_FORE_DATE = PATH_ECHOTOP_NC + flt_startdate.isoformat()[:10] + '/Forecast/'
+    34         1        807.0    807.0      0.0                  if not os.path.isdir(PATH_ECHOTOP_FORE_DATE):
+    35                                                               print('ERR: No EchoTop Forecast Data for ', file)
+    36                                                               continue
+    37         1         44.0     44.0      0.0                  fore_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
+    38         1      80939.0  80939.0      0.0                                              calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_FORE_DATE)]
+    39         1         52.0     52.0      0.0              if USES_CURRENT:
+    40         1        121.0    121.0      0.0                  PATH_ECHOTOP_CUR_DATE = PATH_ECHOTOP_NC + flt_startdate.isoformat()[:10] + '/Current/'
+    41         1       1057.0   1057.0      0.0                  if not os.path.isdir(PATH_ECHOTOP_CUR_DATE):
+    42                                                               print('ERR: No EchoTop Current Data for ', file)
+    43                                                               continue
+    44         1         44.0     44.0      0.0                  cur_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
+    45         1    2304127.0 2304127.0      0.1                                             calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_CUR_DATE)]
+    46                                           
+    47                                                       # Create Basemap, plot on Latitude/Longitude scale
+    48         1         60.0     60.0      0.0              m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
+    49         1         41.0     41.0      0.0                          resolution='l', area_thresh=1000., projection='lcc',
+    50         1   34700154.0 34700154.0      1.4                          lat_0=gb.LAT_ORIGIN, lon_0=gb.LON_ORIGIN)
+    51         1     989956.0 989956.0      0.0              m.drawcoastlines()
+    52         1        104.0    104.0      0.0              Parallels = np.arange(0., 80., 10.)
+    53         1         60.0     60.0      0.0              Meridians = np.arange(10., 351., 20.)
+    54                                           
+    55                                                       # Labels = [left,right,top,bottom]
+    56         1     756365.0 756365.0      0.0              m.drawparallels(Parallels, labels=[False, True, True, False])
+    57         1    1768003.0 1768003.0      0.1              m.drawmeridians(Meridians, labels=[True, False, False, True])
+    58         1        279.0    279.0      0.0              fig2 = plt.gca()
+    59                                           
+    60                                                       # Closest-Approximation - From EchoTop
+    61         1        132.0    132.0      0.0              weather_cubes_time = np.array([], dtype=float)
+    62         1         67.0     67.0      0.0              weather_cubes_lat = np.array([], dtype=float)
+    63         1         64.0     64.0      0.0              weather_cubes_lon = np.array([], dtype=float)
+    64         1         75.0     75.0      0.0              weather_cubes_et = np.array([], dtype=float)
+    65                                           
+    66         1        141.0    141.0      0.0              sttime = datetime.datetime.now()
+    67         1        352.0    352.0      0.0              print('Data Collection Begin\t', str(datetime.datetime.now()))
+    68       215       9829.0     45.7      0.0              for i in range(START_POS, len(flight_tr[:, ]) - 1):
+    69                                           
+    70                                                           # Open EchoTop File Covering the Current Time
+    71       214       8989.0     42.0      0.0                  if USES_CURRENT:
+    72       214     124133.0    580.1      0.0                      temp_idx = np.argmin((flt_time[i]) % cur_timestamps)
+    73       214      10037.0     46.9      0.0                      if temp_idx != idx_cur_et:
+    74       111       4650.0     41.9      0.0                          idx_cur_et = temp_idx
+    75       111    1531397.0  13796.4      0.1                          PATH_ECHOTOP_CUR = PATH_ECHOTOP_CUR_DATE + os.listdir(PATH_ECHOTOP_CUR_DATE)[idx_cur_et]
+    76       111    1795904.0  16179.3      0.1                          et_cur_rootgrp = Dataset(PATH_ECHOTOP_CUR, 'r', format='NetCDF4')#XARR
+    77                                                                   #XARRet_cur_rootgrp = xarray.open_dataset(PATH_ECHOTOP_CUR)
+    78       111       7020.0     63.2      0.0                          et_cur_rootgrp.variables['ECHO_TOP'].set_auto_mask(False)#XARR
+    79       111 1001359477.0 9021256.5     39.7                          relevant_et[0] = et_cur_rootgrp['ECHO_TOP'][0][0]#XARR.fillna(gb.FILLVAL)
+    80       111    6338537.0  57103.9      0.3                          et_cur_rootgrp.close()
+    81       214      14243.0     66.6      0.0                  if USES_FORECAST:
+    82       214     114566.0    535.4      0.0                      temp_idx = np.argmin(flt_time[i] % fore_timestamps)
+    83       214       9804.0     45.8      0.0                      idx_fore_et = temp_idx
+    84       214     725983.0   3392.4      0.0                      PATH_ECHOTOP_FORE = PATH_ECHOTOP_FORE_DATE + os.listdir(PATH_ECHOTOP_FORE_DATE)[idx_fore_et]
+    85       214    3495926.0  16336.1      0.1                      et_fore_rootgrp = Dataset(PATH_ECHOTOP_FORE, 'r', format='NETCDF4')#XARR
+    86                                                               #XARRet_fore_rootgrp = xarray.open_dataset(PATH_ECHOTOP_FORE)
+    87                                                               #XARRet_fore_timestamps = np.array(et_fore_rootgrp['time'], dtype=float)
+    88       214    1061082.0   4958.3      0.0                      et_fore_timestamps = et_fore_rootgrp['time'][:]#XARR
+    89                                                               #XARRet_fore_timestamps = et_fore_timestamps/1e9
+    90       214      13467.0     62.9      0.0                      et_fore_rootgrp.variables['ECHO_TOP'].set_auto_mask(False)
+    91       428      28713.0     67.1      0.0                      for t in range(forecast_start, len(gb.LOOKAHEAD_SECONDS)):
+    92       214      10190.0     47.6      0.0                          idx_time = np.argmin(
+    93       214     608383.0   2842.9      0.0                              et_fore_timestamps % (flt_time[i] + gb.LOOKAHEAD_SECONDS[t]))
+    94       214      13126.0     61.3      0.0                          if idx_time != idx_forecast_times[t-forecast_start]:
+    95        63       3173.0     50.4      0.0                              idx_forecast_times[t-forecast_start] = idx_time
+    96        63  999326388.0 15862323.6     39.6                              relevant_et[t] = et_fore_rootgrp.variables['ECHO_TOP'][idx_time][0]#XARR.fillna(gb.FILLVAL)
+    97       214    3521642.0  16456.3      0.1                      et_fore_rootgrp.close()
+    98                                           
+    99                                                           # Heading Projection & Ortho for point
+   100       214      55350.0    258.6      0.0                  heading = gb.heading_a_to_b(flt_lon[i], flt_lat[i], flt_lat[i + 1], flt_lon[i + 1])
+   101       214      10412.0     48.7      0.0                  heading_ortho = (heading + 90) % 360
+   102       214      11185.0     52.3      0.0                  theta = math.radians(heading - 90)
+   103       214      10482.0     49.0      0.0                  theta_ortho = math.radians(heading_ortho - 90)
+   104                                           
+   105                                                           # find track-point in ET data and calculate point-steps
+   106       214     651664.0   3045.2      0.0                  et_x_idx = np.abs(et_lon - flt_lon[i]).argmin()
+   107       214     521010.0   2434.6      0.0                  et_y_idx = np.abs(et_lat - flt_lat[i - START_POS]).argmin()
+   108                                           
+   109                                                           # Select nearest-available point to determine step-sizes
+   110       214      86474.0    404.1      0.0                  et_x, et_y = et_lon[et_x_idx], et_lat[et_y_idx]
+   111       214      11612.0     54.3      0.0                  et_x_neighbor, et_y_neighbor = -1, -1
+   112       214      14987.0     70.0      0.0                  if (et_x_idx == len(et_lon) - 1):
+   113        69       3742.0     54.2      0.0                      et_x_neighbor = et_x_idx - 1
+   114                                                           else:
+   115       145       8087.0     55.8      0.0                      et_x_neighbor = et_x_idx + 1
+   116       214      11963.0     55.9      0.0                  if (et_y_idx == len(et_lat) - 1):
+   117                                                               et_y_neighbor = et_y_idx - 1
+   118                                                           else:
+   119       214      10797.0     50.5      0.0                      et_y_neighbor = et_y_idx + 1
+   120       214      91957.0    429.7      0.0                  et_delta_x, et_delta_y = np.abs(et_x - et_lon[et_x_neighbor]), np.abs(et_y - et_lat[et_y_neighbor])
+   121                                           
+   122       214      14902.0     69.6      0.0                  unitstep_x = (CUBE_SIZE / 2) * et_delta_x * math.cos(theta)
+   123       214      12476.0     58.3      0.0                  unitstep_y = (CUBE_SIZE / 2) * et_delta_y * math.sin(theta)
+   124       214      11741.0     54.9      0.0                  unitstep_ortho_x = (CUBE_SIZE / 2) * et_delta_x * math.cos(theta_ortho)
+   125       214      11348.0     53.0      0.0                  unitstep_ortho_y = (CUBE_SIZE / 2) * et_delta_y * math.sin(theta_ortho)
+   126                                           
+   127                                                           # Generate 20-point axis orthogonal to heading
+   128       214      11003.0     51.4      0.0                  centerline_ortho_x, actual_ortho_delta_x = np.linspace(- (CUBE_SIZE / 2) * unitstep_ortho_x,
+   129       214       9768.0     45.6      0.0                                                                         (CUBE_SIZE / 2) * unitstep_ortho_x,
+   130       214       9198.0     43.0      0.0                                                                         num=CUBE_SIZE,
+   131       214     206254.0    963.8      0.0                                                                         retstep=True)
+   132       214      12053.0     56.3      0.0                  centerline_ortho_y, actual_ortho_delta_y = np.linspace(- (CUBE_SIZE / 2) * unitstep_ortho_y,
+   133       214       9757.0     45.6      0.0                                                                         (CUBE_SIZE / 2) * unitstep_ortho_y,
+   134       214       9369.0     43.8      0.0                                                                         num=CUBE_SIZE,
+   135       214     154300.0    721.0      0.0                                                                         retstep=True)
+   136                                                           # Generate 20-point axis along heading
+   137       214      11892.0     55.6      0.0                  centerline_x, actual_delta_x = np.linspace(- (CUBE_SIZE / 2) * unitstep_x,
+   138       214     140164.0    655.0      0.0                                                             (CUBE_SIZE / 2) * unitstep_x, num=CUBE_SIZE, retstep=True)
+   139       214      11883.0     55.5      0.0                  centerline_y, actual_delta_y = np.linspace(- (CUBE_SIZE / 2) * unitstep_y,
+   140       214     138434.0    646.9      0.0                                                             (CUBE_SIZE / 2) * unitstep_y, num=CUBE_SIZE, retstep=True)
+   141                                           
+   142                                                           # Collect and Append Single Cube
+   144       214      21741.0    101.6      0.0                  weather_cube_proj = np.zeros((2, CUBE_SIZE, CUBE_SIZE), dtype=float)
+   145       214      16315.0     76.2      0.0                  weather_cube_actual = np.zeros((2, CUBE_SIZE, CUBE_SIZE), dtype=float)
+   146       214      15756.0     73.6      0.0                  weather_cube_et = np.zeros((CUBE_SIZE, CUBE_SIZE), dtype=float)
+   147                                           
+   148                                                           # Vectorized Cube Data Extraction
+   149       214      94413.0    441.2      0.0                  weather_cube_proj[0] = flt_lon[i] + np.tile(centerline_x, (CUBE_SIZE, 1)) + np.tile(centerline_ortho_x,
+   150       214      90523.0    423.0      0.0                                                                                                      (CUBE_SIZE, 1)).T
+   151       214      71672.0    334.9      0.0                  weather_cube_proj[1] = flt_lat[i] + np.tile(centerline_y, (CUBE_SIZE, 1)) + np.tile(centerline_ortho_y,
+   152       214      72448.0    338.5      0.0                                                                                                      (CUBE_SIZE, 1)).T
+   153      4494     198677.0     44.2      0.0                  for idx_ in range(0, CUBE_SIZE):
+   154     89880    3929783.0     43.7      0.2                      for idx_ortho in range(0, CUBE_SIZE):
+   155     85600  194876838.0   2276.6      7.7                          et_actual_idx_x = np.abs(et_lon - weather_cube_proj[0][idx_][idx_ortho]).argmin()
+   156     85600  189304247.0   2211.5      7.5                          et_actual_idx_y = np.abs(et_lat - weather_cube_proj[1][idx_][idx_ortho]).argmin()
+   157                                           
+   158     85600   19310240.0    225.6      0.8                          weather_cube_actual[0][idx_][idx_ortho] = et_lon[et_actual_idx_x]
+   159     85600   17454540.0    203.9      0.7                          weather_cube_actual[1][idx_][idx_ortho] = et_lat[et_actual_idx_y]
+   160    256800   12818628.0     49.9      0.5                          for t in range(0, len(gb.LOOKAHEAD_SECONDS)):
+   161    171200   10701429.0     62.5      0.4                              weather_cube_et[idx_][idx_ortho] = relevant_et[t][et_actual_idx_y][et_actual_idx_x]
+   162                                           
+   163                                                           # Print the max Error between cube points
+   164       214      29011.0    135.6      0.0                  err = np.abs(weather_cube_actual - weather_cube_proj)
+   165       214      34333.0    160.4      0.0                  err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
+   166       214      49475.0    231.2      0.0                  print("Max Distance Err:\t", "{:10.4f}".format(err_dist.flatten()[err_dist.argmax()]), "\t", str(i + 1),
+   167       214       9237.0     43.2      0.0                        ' / ',
+   168       214      27458.0    128.3      0.0                        len(flight_tr[:, 1] - 1), '\t', num2date(flt_time[i], units='Seconds since 1970-01-01T00:00:00',
+   169       214     478112.0   2234.2      0.0                                                                 calendar='gregorian').isoformat())
+   170                                           
+   171                                                           # Append current cube to list of data
+   172       214     176686.0    825.6      0.0                  weather_cubes_lat = np.append(weather_cubes_lat, weather_cube_actual[1])
+   173       214     378707.0   1769.7      0.0                  weather_cubes_lon = np.append(weather_cubes_lon, weather_cube_actual[0])
+   174       214     143820.0    672.1      0.0                  weather_cubes_et = np.append(weather_cubes_et, weather_cube_et)
+   175       214      53446.0    249.7      0.0                  weather_cubes_time = np.append(weather_cubes_time, flt_time[i])
+   176                                           
+   177                                                       # Verification: Plot collected cubes v. actual flight points
+   178                                           
+   179         1     356707.0 356707.0      0.0              m.scatter(weather_cubes_lon, weather_cubes_lat, marker=',', color='blue', latlon=True)
+   180         1      29011.0  29011.0      0.0              m.scatter(flight_tr[:, 2], flight_tr[:, 1], marker=',', color='red', latlon=True)
+   181         1     360395.0 360395.0      0.0              plt.show(block=False)
+   182                                                       PATH_FIGURE_PROJECTION = gb.PATH_PROJECT + '/Output/Weather Cubes/Plots/' \
+   183         1        252.0    252.0      0.0                                       + flt_startdate.isoformat().replace(':', '_') + '.' + gb.FIGURE_FORMAT
+   184         1    7967268.0 7967268.0      0.3              plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)
+   185         1      21104.0  21104.0      0.0              plt.close()
+   186                                           
+   187                                                       # reshape and write to NetCDF
+   188         1        133.0    133.0      0.0              weather_cubes_lat = weather_cubes_lat.reshape(-1, CUBE_SIZE * CUBE_SIZE)
+   189         1         50.0     50.0      0.0              weather_cubes_lon = weather_cubes_lon.reshape(-1, CUBE_SIZE * CUBE_SIZE)
+   190         1         50.0     50.0      0.0              weather_cubes_et = weather_cubes_et.reshape(-1, CUBE_SIZE * CUBE_SIZE)
+   191                                           
+   192         1        187.0    187.0      0.0              PATH_NC_FILENAME = PATH_OUTPUT_CUBES + flt_startdate.isoformat()[:10] + '/' + file.split('.')[0] + '.nc'
+   193         1       1754.0   1754.0      0.0              if (not os.listdir(PATH_OUTPUT_CUBES).__contains__(flt_startdate.isoformat()[:10])):
+   194                                                           os.mkdir(PATH_OUTPUT_CUBES + flt_startdate.isoformat()[:10])
+   195         1      16654.0  16654.0      0.0              cubes_rootgrp = Dataset(PATH_NC_FILENAME, 'w', type='NetCDF4')
+   196                                           
+   197                                                       # Add Dimensions: t, X/YPoints
+   198         1        328.0    328.0      0.0              cubes_rootgrp.createDimension('time', size=None)
+   199         1        119.0    119.0      0.0              cubes_rootgrp.createDimension('XPoints', size=20)
+   200         1        102.0    102.0      0.0              cubes_rootgrp.createDimension('YPoints', size=20)
+   201                                           
+   202                                                       # Add Variables: t, X/YPoints, lat/lon, echotop
+   203         1       1125.0   1125.0      0.0              cubes_rootgrp.createVariable('time', datatype=float, dimensions=('time'))
+   204         1        644.0    644.0      0.0              cubes_rootgrp.variables['time'].units = 'Seconds since 1970-01-01T00:00:00'
+   205         1        271.0    271.0      0.0              cubes_rootgrp.variables['time'].calendar = 'gregorian'
+   206         1        667.0    667.0      0.0              cubes_rootgrp.createVariable('XPoints', datatype=float, dimensions=('XPoints'))
+   207         1        280.0    280.0      0.0              cubes_rootgrp.variables['XPoints'].units = 'indexing for each weather cube'
+   208         1        608.0    608.0      0.0              cubes_rootgrp.createVariable('YPoints', datatype=float, dimensions=('YPoints'))
+   209         1        239.0    239.0      0.0              cubes_rootgrp.variables['YPoints'].units = 'indexing for each weather cube'
+   210         1        642.0    642.0      0.0              cubes_rootgrp.createVariable('Latitude', datatype=float, dimensions=('time', 'XPoints', 'YPoints'))
+   211         1        617.0    617.0      0.0              cubes_rootgrp.createVariable('Longitude', datatype=float, dimensions=('time', 'XPoints', 'YPoints'))
+   212         1        640.0    640.0      0.0              cubes_rootgrp.createVariable('Echo_Top', datatype=float, dimensions=('time', 'XPoints', 'YPoints'))
+   213                                           
+   214                                                       # Add Metadata: Flight Callsign, Earth-radius,
+   215         1        346.0    346.0      0.0              cubes_rootgrp.Callsign = file.split('_')[3]
+   216         1        245.0    245.0      0.0              cubes_rootgrp.rEarth = gb.R_EARTH
+   217                                           
+   218                                                       # Assign Weather Cube Data to netCDF Variables
+   219         1      19279.0  19279.0      0.0              cubes_rootgrp.variables['XPoints'][:] = np.arange(0, CUBE_SIZE, 1)
+   220         1       3057.0   3057.0      0.0              cubes_rootgrp.variables['YPoints'][:] = np.arange(0, CUBE_SIZE, 1)
+   221         1       2416.0   2416.0      0.0              cubes_rootgrp.variables['time'][:] = weather_cubes_time
+   222         1      15780.0  15780.0      0.0              cubes_rootgrp.variables['Latitude'][:] = weather_cubes_lat
+   223         1      13120.0  13120.0      0.0              cubes_rootgrp.variables['Longitude'][:] = weather_cubes_lon
+   224         1      11751.0  11751.0      0.0              cubes_rootgrp.variables['Echo_Top'][:] = weather_cubes_et
+   225                                           
+   226         1      83052.0  83052.0      0.0              cubes_rootgrp.close()
+   227         1        970.0    970.0      0.0          os.chdir('..')
+   228         1        557.0    557.0      0.0      os.chdir(gb.PATH_PROJECT)
+   229         1        139.0    139.0      0.0      edtime = datetime.datetime.now()
+   230         1         54.0     54.0      0.0      delta = edtime - sttime
+   231         1         40.0     40.0      0.0      return delta
+
+
+
+Process finished with exit code 0
