@@ -44,10 +44,14 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     first_filed_date = num2date(first_filed_time, units='Seconds since 1970-01-01T00:00:00Z', calendar='gregorian')
     last_filed_date = num2date(last_filed_time, units='Seconds since 1970-01-01T00:00:00Z', calendar='gregorian')
 
+    # TODO: Fix parent_dir workaround
+    parent_dir = os.path.abspath(file).split('\\')[-2]
+    save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
+
     modified_filename = file.split('_')
     if not (modified_filename[0] == 'Flight'): modified_filename.pop(0)
     modified_filename = '_'.join(modified_filename)
-    PATH_TRACK_POINT = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/' + first_filed_date.isoformat()[:10] + \
+    PATH_TRACK_POINT = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/' + save_date.isoformat()[:10] + \
                        '/' + modified_filename.replace('Flight_Plan', 'Flight_Track')
     if not (os.path.isfile(PATH_TRACK_POINT)):
     #    PATH_TRACK_POINT = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/' + first_filed_date.isoformat()[:10] + \
@@ -171,7 +175,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
                                                                           slice_size, endpoint=True)
 
     data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T
-    gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', first_filed_date, data, modified_filename, orig_filename=file,
+    gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', save_date, data, modified_filename, orig_filename=file,
                         bool_delete_original=False)
 
     '''
