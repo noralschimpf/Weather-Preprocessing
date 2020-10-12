@@ -22,12 +22,17 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     filter_slice2 = np.where(data[:, 2] == 'Unknown')
     filter_slice3 = np.where(pd.isnull(data[:, 0]))
     filter_slice4 = np.where(pd.isnull(data[:, 2]))
-    filter = np.np.hstack((filter_slice1, filter_slice2, filter_slice3, filter_slice4))
+    filter = np.hstack((filter_slice1, filter_slice2, filter_slice3, filter_slice4))
     filtered_data = np.delete(data, filter, axis=0)
 
     # Select the last Complete FP entry
-    index_last_filed = np.where(filtered_data[:, 0] == np.max(filtered_data[:, 0]))
-    index_first_filed = np.where(filtered_data[:, 0] == np.min(filtered_data[:, 0]))
+    try:
+        index_last_filed = np.where(filtered_data[:, 0] == np.max(filtered_data[:, 0]))
+        index_first_filed = np.where(filtered_data[:, 0] == np.min(filtered_data[:, 0]))
+    except ValueError:
+        logging.error(' no usable entries for ' + file)
+        return -1
+
     first_filed_entry = filtered_data[index_first_filed][0]
     last_filed_entry = filtered_data[index_last_filed][0]
 
@@ -48,7 +53,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     #    PATH_TRACK_POINT = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/' + first_filed_date.isoformat()[:10] + \
     #                       '/' + modified_filename.replace('Flight_Plan', 'Flight_Track')
     #    if not (os.path.isfile(PATH_TRACK_POINT)):
-        print("WARNING: ", PATH_TRACK_POINT.split('/')[-1], "not found on ", last_filed_date.isoformat()[:10], "; cannot associate timestamps")
+        logging.warning(' ' + PATH_TRACK_POINT.split('/')[-1] + "not found on " + last_filed_date.isoformat()[:10] + "; cannot associate timestamps")
         return -1
     if os.path.isfile(PATH_TRACK_POINT):
         bln_trk_found = True
@@ -91,7 +96,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
         elif len(waypoints[i]) == LEN_NAVAID:
             r = requests.get(LINK_NAVAID + waypoints[i])
         else:
-            print("ERR: UNKNOWN ENTRY", waypoints[i])
+            logging.error(" UNKNOWN ENTRY" + waypoints[i])
             exit(13)
 
         # Open and search HTML page in BeautifulSoup
@@ -208,21 +213,21 @@ if __name__ == '__main__':
 
     logging.basicConfig(filename=gb.PATH_PROJECT + '/Output/Flight Plans/FP_Prep.log', level=logging.INFO)
     sttime = datetime.datetime.now()
-    logging.info('Started:\t' + sttime.isoformat())
+    logging.info(' Started:\t' + sttime.isoformat())
+    func_process_file = partial(process_file, gb.PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
+                                LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT)
+
     os.chdir(PATH_FLIGHT_PLANS)
     data_dirs = [x for x in os.listdir() if not (x == 'Shifted' or x == 'Sorted')]
     for directory in data_dirs:
         os.chdir(directory)
         Flight_Plan_Files = [x for x in os.listdir() if (x.__contains__('Flight_Plan') and x.__contains__('.txt'))]
-
         files = os.listdir()
         # files = [os.path.abspath('.') + '/' + file for file in files]
 
         for file in Flight_Plan_Files:
-             process_file(gb.PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT, LINK_AIRPORT, LEN_NAVAID ,
-                          LEN_WAYPOINT, LEN_AIRPORT, file)
-        func_process_file = partial(process_file, gb.PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
-                                    LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT)
+             func_process_file(file)
+
         #with ProcessPoolExecutor(max_workers=6) as ex:
         #    exit_code = ex.map(func_process_file, files)
 
@@ -235,8 +240,8 @@ if __name__ == '__main__':
         if len(files) == 0 or (len(files) == 1 and files[0].__contains__('Summary')):
             shutil.rmtree(dr)
         else:
-            logging.warning('WARNING: ' + str(dr) + ' may contain unresolved flight plans')
+            logging.warning(' ' + str(dr) + ' may contain unresolved flight plans')
     edtime = datetime.datetime.now()
     delta = edtime - sttime
-    logging.info('done: ' + edtime.isoformat())
-    logging.info('execution time: ' + delta.total_seconds() + ' s')
+    logging.info(' done: ' + edtime.isoformat())
+    logging.info(' execution time: ' + str(delta.total_seconds()) + ' s')

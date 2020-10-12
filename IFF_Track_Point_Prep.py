@@ -38,7 +38,7 @@ def process_file(PATH_PROJECT : str, TARGET_SAMPLE_SIZE : int, file : str):
 
     times, lats, lons, alts = None, None, None, None
     if (data_slicing_incr <= 0):
-        logging.warning('WARNING: ' + str(file) + ' length (' + str(len(data)) + ') is too short for target size ' + str(TARGET_SAMPLE_SIZE))
+        logging.warning(' ' + str(file) + ' length (' + str(len(data)) + ') is too short for target size ' + str(TARGET_SAMPLE_SIZE))
         times = data[:, 0]
         lats = data[:, 1]
         lons = data[:, 2]
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     os.chdir(PATH_TRACK_POINTS)
 
     sttime = datetime.datetime.now()
-    logging.info('Starting: ' + sttime.isoformat())
+    logging.info(' Starting: ' + sttime.isoformat())
 
     track_objs = [x for x in os.listdir() if not (x == 'Shifted' or x == 'Sorted')]
     func_process_file = partial(process_file, gb.PATH_PROJECT, gb.TARGET_SAMPLE_SIZE)
@@ -116,9 +116,9 @@ if __name__ == '__main__':
         if (len(files) == 0 or (len(files) == 1 and files[0].__contains__('Summary'))):
             shutil.rmtree(dr)
         else:
-            logging.warning('WARNING: ' + str(dr) + ' may contain unresolved flight tracks')
+            logging.warning(' ' + str(dr) + ' may contain unresolved flight tracks')
 
     edtime = datetime.datetime.now()
     delta = edtime - sttime
-    logging.info('Done: ' + edtime.isoformat())
-    logging.info('Execution Time: ' + delta.total_seconds())
+    logging.info(' Done: ' + edtime.isoformat())
+    logging.info(' Execution Time: ' + str(delta.total_seconds()) + ' s')

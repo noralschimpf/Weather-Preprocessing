@@ -36,7 +36,7 @@ def process_file(path_et, file):
         SIZE_TIME = 15
         if not file.__contains__('0000Z'):
             rootgrp_orig.close()
-            logging.info('Skipping ', file)
+            logging.info(' Skipping ', file)
             return
         time = rootgrp_orig.variables["times"][:15]
         time.units = rootgrp_orig.variables["times"].units
@@ -158,7 +158,7 @@ def main():
     PATH_ECHOTOP_RAW = gb.PATH_PROJECT + '\\Data\\EchoTop\\'
     logging.basicConfig(filename=gb.PATH_PROJECT + '/Output/EchoTop/ET_Prep.log', level=logging.INFO)
     sttime = datetime.datetime.now()
-    logging.info('Started: ' + sttime.isoformat())
+    logging.info(' Started: ' + sttime.isoformat())
 
     os.chdir(PATH_ECHOTOP_RAW)
     process_file_partial = partial(process_file, PATH_ECHOTOP_RAW)
@@ -177,8 +177,8 @@ def main():
 
     edtime = datetime.datetime.now()
     delta = edtime - sttime
-    logging.info('completed: ' + edtime.isoformat())
-    logging.info('execution time: ', delta.total_seconds(), ' seconds')
+    logging.info(' completed: ' + edtime.isoformat())
+    logging.info(' execution time: ', str(delta.total_seconds()) + ' s')
 
     os.chdir(gb.PATH_PROJECT)
 
