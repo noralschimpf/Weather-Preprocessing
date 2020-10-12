@@ -2,57 +2,63 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
 import Global_Tools as gb
-import os, requests
+import os, requests, shutil
 from netCDF4 import num2date
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
+import datetime
 from mpl_toolkits.basemap import Basemap
 from matplotlib import pyplot as plt
 
-PATH_FLIGHT_PLANS = gb.PATH_PROJECT + '/Data/IFF_Flight_Plans/'
-LINK_NAVAID = 'https://opennav.com/navaid/us/'
-LINK_WAYPOINT = 'https://opennav.com/waypoint/US/'
-LINK_AIRPORT = 'https://opennav.com/airport/'
-LEN_AIRPORT = 4
-LEN_NAVAID = 3
-LEN_WAYPOINT = 5
 
-os.chdir(PATH_FLIGHT_PLANS)
-Flight_Plan_Files = [x for x in os.listdir() if x.__contains__('_fp.txt')]
-
-for file in Flight_Plan_Files:
+def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
+                 LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT, file):
     data_frame = pd.read_csv(file)
     data = data_frame.values
 
     # filter for FP entries containing a Waypoint AND Timestamp
-    filter_slice1 = np.where((data[:, 3] == 'Unknown'))
+    filter_slice1 = np.where((data[:, 0] == 'Unknown'))
     filter_slice2 = np.where(data[:, 2] == 'Unknown')
-    filter_slice3 = np.where(pd.isnull(data[:, 3]))
-    filter = np.append(filter_slice1, filter_slice2)
-    filter = np.append(filter, filter_slice3)
+    filter_slice3 = np.where(pd.isnull(data[:, 0]))
+    filter_slice4 = np.where(pd.isnull(data[:, 2]))
+    filter = np.np.hstack((filter_slice1, filter_slice2, filter_slice3, filter_slice4))
     filtered_data = np.delete(data, filter, axis=0)
 
     # Select the last Complete FP entry
-    index_last_filed = np.where(filtered_data[:, 2] == np.max(filtered_data[:, 2]))
-    index_first_filed = np.where(filtered_data[:, 2] == np.min(filtered_data[:, 2]))
-    last_filed_entry = filtered_data[index_last_filed][0]
+    index_last_filed = np.where(filtered_data[:, 0] == np.max(filtered_data[:, 0]))
+    index_first_filed = np.where(filtered_data[:, 0] == np.min(filtered_data[:, 0]))
     first_filed_entry = filtered_data[index_first_filed][0]
+    last_filed_entry = filtered_data[index_last_filed][0]
 
     # Search for track-point file
     trk_time, trk_lat, trk_lon = None, None, None
-    filed_time = np.float64(first_filed_entry[2])
-    filed_date = num2date(filed_time, units='Seconds since 1970-01-01T00:00:00Z', calendar='gregorian')
-    PATH_TRACK_POINT = gb.PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/' + filed_date.isoformat()[:10] + '/' + file[
-                                                                                                                :-6] + 'trk.txt'
-    if (not os.path.isfile(PATH_TRACK_POINT)):
-        print("WARNING: ", PATH_TRACK_POINT.split('/')[-1], "not found; cannot associate timestamps")
-    else:
+    bln_trk_found = False
+    first_filed_time = np.float64(first_filed_entry[0])
+    last_filed_time = np.float64(last_filed_entry[0])
+    first_filed_date = num2date(first_filed_time, units='Seconds since 1970-01-01T00:00:00Z', calendar='gregorian')
+    last_filed_date = num2date(last_filed_time, units='Seconds since 1970-01-01T00:00:00Z', calendar='gregorian')
+
+    modified_filename = file.split('_')
+    if not (modified_filename[0] == 'Flight'): modified_filename.pop(0)
+    modified_filename = '_'.join(modified_filename)
+    PATH_TRACK_POINT = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/' + first_filed_date.isoformat()[:10] + \
+                       '/' + modified_filename.replace('Flight_Plan', 'Flight_Track')
+    if not (os.path.isfile(PATH_TRACK_POINT)):
+    #    PATH_TRACK_POINT = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/' + first_filed_date.isoformat()[:10] + \
+    #                       '/' + modified_filename.replace('Flight_Plan', 'Flight_Track')
+    #    if not (os.path.isfile(PATH_TRACK_POINT)):
+        print("WARNING: ", PATH_TRACK_POINT.split('/')[-1], "not found on ", last_filed_date.isoformat()[:10], "; cannot associate timestamps")
+        return -1
+    if os.path.isfile(PATH_TRACK_POINT):
+        bln_trk_found = True
         trk_data = np.loadtxt(PATH_TRACK_POINT, delimiter=',', usecols=(0, 1, 2))
         trk_time = trk_data[:, 0]
         trk_lat = trk_data[:, 1]
         trk_lon = trk_data[:, 2]
 
-    str_waypoints = first_filed_entry[3]
+    str_waypoints = first_filed_entry[2]
+    str_final_waypoints = last_filed_entry[2]
     waypoints = gb.clean_waypoints(str_waypoints.split('.', 100))
-
     '''
     # Concatenate and Parse Airport, Waypoint, NavAid codes
     str_all_waypoints = filtered_data[:,3]
@@ -67,7 +73,7 @@ for file in Flight_Plan_Files:
         if(unique_entry):
             print(entry_waypoints)
     '''
-    print(waypoints)
+    #print(waypoints)
 
     lat_waypoints = np.zeros((len(waypoints),), np.float64)
     lon_waypoints = np.zeros((len(waypoints),), np.float64)
@@ -77,11 +83,11 @@ for file in Flight_Plan_Files:
     # Parse lat/lon/alt? with openNav
     for i in range(len(waypoints)):
         # Open HTTP request to access waypoint page
-        if (len(waypoints[i]) == LEN_AIRPORT):
+        if len(waypoints[i]) == LEN_AIRPORT:
             r = requests.get(LINK_AIRPORT + waypoints[i])
-        elif (len(waypoints[i]) == LEN_WAYPOINT):
+        elif len(waypoints[i]) == LEN_WAYPOINT:
             r = requests.get(LINK_WAYPOINT + waypoints[i])
-        elif (len(waypoints[i]) == LEN_NAVAID):
+        elif len(waypoints[i]) == LEN_NAVAID:
             r = requests.get(LINK_NAVAID + waypoints[i])
         else:
             print("ERR: UNKNOWN ENTRY", waypoints[i])
@@ -115,17 +121,16 @@ for file in Flight_Plan_Files:
         lon_waypoints[i] = lon
 
         # Assign approx. Flight Altitude
-        # TODO: Identify altitude data in flight plans
         if (alt == 0.):
             alt_waypoints[i] = 35000.
         else:
             alt_waypoints[i] = alt
 
-        print(waypoints[i], '\t', "{:10.5f}".format(lat_waypoints[i]), '\t', "{:10.5f}".format(lon_waypoints[i]),
-              '\t', str(alt_waypoints[i]))
+        # print(waypoints[i], '\t', "{:10.5f}".format(lat_waypoints[i]), '\t', "{:10.5f}".format(lon_waypoints[i]),
+        #      '\t', str(alt_waypoints[i]))
 
     # time assignment
-    knowntimes = np.array((trk_time[0],trk_time[-1]))
+    knowntimes = np.array((trk_time[0], trk_time[-1]))
     interp_dists = gb.km_between_coords(lat_waypoints, lon_waypoints)
     dists = np.array((interp_dists[0], interp_dists[-1]))
     time_waypoints = np.interp(interp_dists, dists, knowntimes)
@@ -140,7 +145,7 @@ for file in Flight_Plan_Files:
     time_coord = np.zeros((sample_size,), dtype=np.float)
 
     for i in range(1, len(waypoints)):
-        if (i < len(waypoints) - 1):
+        if i < len(waypoints) - 1:
             lon_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lon_waypoints[i - 1], lon_waypoints[i],
                                                                          slice_size, endpoint=False)
             lat_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lat_waypoints[i - 1], lat_waypoints[i],
@@ -160,7 +165,8 @@ for file in Flight_Plan_Files:
                                                                           slice_size, endpoint=True)
 
     data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T
-    gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', filed_date, data, file, bool_delete_original=True)
+    gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', first_filed_date, data, modified_filename, orig_filename=file,
+                        bool_delete_original=False)
 
     '''
     # Plot Flight Plan to Verify using Basemap
@@ -187,6 +193,46 @@ for file in Flight_Plan_Files:
     plt.close()
     '''
 
-    print(file, ' read')
-os.chdir(gb.PATH_PROJECT)
-print('done: ')
+    #print(file, ' read')
+
+
+if __name__ == '__main__':
+    PATH_FLIGHT_PLANS = gb.PATH_PROJECT + '/Data/IFF_Flight_Plans/'
+    LINK_NAVAID = 'https://opennav.com/navaid/us/'
+    LINK_WAYPOINT = 'https://opennav.com/waypoint/US/'
+    LINK_AIRPORT = 'https://opennav.com/airport/'
+    LEN_AIRPORT = 4
+    LEN_NAVAID = 3
+    LEN_WAYPOINT = 5
+    sttime = datetime.datetime.now()
+    os.chdir(PATH_FLIGHT_PLANS)
+    data_dirs = [x for x in os.listdir() if not (x == 'Shifted' or x == 'Sorted')]
+    for directory in data_dirs:
+        os.chdir(directory)
+        Flight_Plan_Files = [x for x in os.listdir() if (x.__contains__('Flight_Plan') and x.__contains__('.txt'))]
+
+        files = os.listdir()
+        # files = [os.path.abspath('.') + '/' + file for file in files]
+
+        for file in Flight_Plan_Files:
+             process_file(gb.PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT, LINK_AIRPORT, LEN_NAVAID ,
+                          LEN_WAYPOINT, LEN_AIRPORT, file)
+        func_process_file = partial(process_file, gb.PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
+                                    LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT)
+        #with ProcessPoolExecutor(max_workers=6) as ex:
+        #    exit_code = ex.map(func_process_file, files)
+
+        os.chdir('..')
+    os.chdir(PATH_FLIGHT_PLANS)
+    print('Deleting empty Folders')
+    dirs = [x for x in os.listdir() if os.path.isdir(x)]
+    for dr in dirs:
+        files = os.listdir(dr)
+        if len(files) == 0 or (len(files) == 1 and files[0].__contains__('Summary')):
+            shutil.rmtree(dr)
+        #else:
+            # TODO: LOG
+            #print('WARNING: Review ' + str(dr))
+    edtime = datetime.datetime.now()
+    delta = edtime - sttime
+    print('done: ', delta.total_seconds())

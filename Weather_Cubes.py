@@ -251,16 +251,17 @@ if __name__ == '__main__':
     func_process_partial = partial(process_flight_plan, PATH_ECHOTOP_NC, PATH_OUTPUT_CUBES, et_lon, et_lat,
                                    USES_CURRENT, USES_FORECAST, forecast_start)
 
+
     os.chdir(PATH_COORDS)
     sttime = datetime.datetime.now()
     dirs = [x for x in os.listdir() if os.path.isdir(x)]
-    for dir in dirs:
-        os.chdir(dir)
-        files = os.listdir()
-        files = [os.path.abspath('.') + '/' + file for file in files]
-        with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
-            exit_code = ex.map(func_process_partial, files)
-        os.chdir('..')
+    #for dir in dirs:
+    #    os.chdir(dir)
+    files = os.listdir()
+    files = [os.path.abspath('.') + '/' + file for file in files]
+    with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
+        exit_code = ex.map(func_process_partial, files)
+    #    os.chdir('..')
     os.chdir(gb.PATH_PROJECT)
 
     edtime = datetime.datetime.now()

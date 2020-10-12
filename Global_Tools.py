@@ -1,6 +1,6 @@
 import numpy as np
 import math
-import os, re
+import os, re, zipfile
 from line_profiler import LineProfiler
 
 # Global Constants, specc'd by SHERLOC
@@ -12,10 +12,11 @@ LOOKAHEAD_SECONDS = [0.]
 
 # Path / Project Vars
 CUBE_SIZE = 20
-TARGET_SAMPLE_SIZE = 500
+TARGET_SAMPLE_SIZE = -500
 PROCESS_MAX = 4
 PATH_PROJECT = os.path.abspath('.')
 FIGURE_FORMAT = 'png'
+
 
 '''
 Convert relative position to latitude/longitude coordinates for Basemap
@@ -193,15 +194,16 @@ Call from within iterator (for file in os.listdir():)
 
 
 # TODO: Append/replace file if existing
-def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, filename, bool_delete_original=False,
+def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, save_filename, orig_filename='', bool_delete_original=False,
                      bool_append=False):
+    if orig_filename=='': orig_filename = save_filename
     str_current_date = datetime_obj.isoformat()[:10]
     if not (os.listdir(PATH_TO_DATA_DIR).__contains__(str_current_date)):
         os.mkdir(PATH_TO_DATA_DIR + str_current_date)
-    PATH_START_DATE = PATH_TO_DATA_DIR + str_current_date + '/' + filename
+    PATH_START_DATE = PATH_TO_DATA_DIR + str_current_date + '/' + save_filename
     np.savetxt(PATH_START_DATE, data_to_save, delimiter=',', fmt='%s')
     if bool_delete_original:
-        os.remove(filename)
+        os.remove(orig_filename)
 
 
 # Decorate (@profile) to generate a function profile
