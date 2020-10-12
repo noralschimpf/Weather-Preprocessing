@@ -10,6 +10,7 @@ Read Flight Track-Point Files and Plot in Basemap
 
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 from mpl_toolkits.basemap import Basemap, addcyclic
 from matplotlib import dates, cm
 from netCDF4 import Dataset, num2date
@@ -62,17 +63,12 @@ def process_file(PATH_PROJECT : str, TARGET_SAMPLE_SIZE : int, file : str):
     # Sort and Save file by timestamp
     save_data = np.vstack((times, lats, lons, alts)).T
     timestamp = num2date(times[0], units="seconds since 1970-01-01T00:00:00", calendar="gregorian")
-
-    # TODO: Fix parent_dir workaround
-    parent_dir = os.path.abspath(file).split('\\')[-2]
-    save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
-
     PATH_TO_SORTED_TRACKPOINTS = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
     modified_filename = file.split('_')
     if not (modified_filename[0] == 'Flight'):
         modified_filename.pop(0)
     modified_filename = '_'.join(modified_filename)
-    gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, save_date, save_data, modified_filename, orig_filename=file,
+    gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, timestamp, save_data, modified_filename, orig_filename=file,
                         bool_delete_original=True)
     print('processed ' + str(file))
     return 0
