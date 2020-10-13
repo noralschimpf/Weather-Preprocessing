@@ -176,7 +176,6 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
                 time_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(time_waypoints[i - 1], time_waypoints[i],
                                                                               slice_size, endpoint=True)
     else:
-        logging.warning(' negative sample size. Using default 1 sample/sec for flight plan')
         sample_size = int(np.round(knowntimes[1] - knowntimes[0]))
         samples_per_segment = [int(np.round(time_waypoints[i]-time_waypoints[i-1])) for i in range(1,len(time_waypoints))]
         lat_coord = np.zeros((sample_size,), dtype=np.float)
@@ -212,7 +211,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     # Plot Flight Plan to Verify using Basemap
     m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
                 resolution='l', area_thresh=1000., projection='lcc',
-                lat_0=gb.LAT_ORIGIN, lon_0=gb.LONG_ORIGIN)
+                lat_0=gb.LAT_ORIGIN, lon_0=gb.LON_ORIGIN)
     m.drawcoastlines()
     Parallels = np.arange(0., 80., 10.)
     Meridians = np.arange(10., 351., 20.)
@@ -249,8 +248,10 @@ if __name__ == '__main__':
     if os.path.isfile(PATH_FP_LOG):
         os.remove(PATH_FP_LOG)
     logging.basicConfig(filename=PATH_FP_LOG, level=logging.INFO)
+    logging.warning(' negative sample size. Using default 1 sample/sec for flight plan')
     sttime = datetime.datetime.now()
     logging.info(' Started:\t' + sttime.isoformat())
+
     func_process_file = partial(process_file, gb.PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
                                 LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT)
 
@@ -262,11 +263,11 @@ if __name__ == '__main__':
         files = os.listdir()
         # files = [os.path.abspath('.') + '/' + file for file in files]
 
-        for file in Flight_Plan_Files:
-             func_process_file(file)
+        #for file in Flight_Plan_Files:
+        #     func_process_file(file)
 
-        #with ProcessPoolExecutor(max_workers=6) as ex:
-        #    exit_code = ex.map(func_process_file, files)
+        with ProcessPoolExecutor(max_workers=6) as ex:
+            exit_code = ex.map(func_process_file, files)
 
         os.chdir('..')
     os.chdir(PATH_FLIGHT_PLANS)
