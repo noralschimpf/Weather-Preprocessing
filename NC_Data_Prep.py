@@ -156,7 +156,10 @@ def process_file(path_et, file):
 
 def main():
     PATH_ECHOTOP_RAW = gb.PATH_PROJECT + '\\Data\\EchoTop\\'
-    logging.basicConfig(filename=gb.PATH_PROJECT + '/Output/EchoTop/ET_Prep.log', level=logging.INFO)
+    PATH_NC_LOG = gb.PATH_PROJECT + '/Output/EchoTop/ET_Prep.log'
+    if os.path.isfile(PATH_NC_LOG):
+        os.remove(PATH_NC_LOG)
+    logging.basicConfig(filename=PATH_NC_LOG, level=logging.INFO)
     sttime = datetime.datetime.now()
     logging.info(' Started: ' + sttime.isoformat())
 

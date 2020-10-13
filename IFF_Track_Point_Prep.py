@@ -36,7 +36,7 @@ def process_file(PATH_PROJECT : str, TARGET_SAMPLE_SIZE : int, file : str):
     #data_slicing_incr = 0
 
     times, lats, lons, alts = None, None, None, None
-    if (data_slicing_incr <= 0):
+    if (data_slicing_incr == 0):
         logging.warning(' ' + str(file) + ' length (' + str(len(data)) + ') is too short for target size ' + str(TARGET_SAMPLE_SIZE))
         times = data[:, 0]
         lats = data[:, 1]
@@ -80,10 +80,15 @@ def process_file(PATH_PROJECT : str, TARGET_SAMPLE_SIZE : int, file : str):
 
 if __name__ == '__main__':
     PATH_TRACK_POINTS = gb.PATH_PROJECT + '/data/IFF_Track_Points/'
-    logging.basicConfig(filename=gb.PATH_PROJECT + '/Output/Flight Tracks/FT_Prep.log', level=logging.INFO)
+    PATH_FT_LOG = gb.PATH_PROJECT + '/Output/Flight Tracks/FT_Prep.log'
+    if os.path.isfile(PATH_FT_LOG):
+        os.remove(PATH_FT_LOG)
+    logging.basicConfig(filename=PATH_FT_LOG, level=logging.INFO)
 
     # Open, plot, and downsample each flight-track CSV
     os.chdir(PATH_TRACK_POINTS)
+    if gb.TARGET_SAMPLE_SIZE <=0:
+        logging.warning(' target sample size (' + str(gb.TARGET_SAMPLE_SIZE) + ') <= 0; using default (unaltered) sampling')
 
     sttime = datetime.datetime.now()
     logging.info(' Starting: ' + sttime.isoformat())

@@ -233,8 +233,10 @@ if __name__ == '__main__':
     PATH_ECHOTOP_FILE = PATH_ECHOTOP_NC + '2020-06-22/Current/ciws.EchoTop.20200622T230000Z.nc'
     PATH_TEMP_DATA = gb.PATH_PROJECT + '/Data/TMP_200mb.txt'
     PATH_OUTPUT_CUBES = gb.PATH_PROJECT + '/Output/Weather Cubes/'
-
-    logging.basicConfig(gb.PATH_PROJECT + '/Output/Weather Cubes/Cube_Gen.log', level=logging.INFO)
+    PATH_CUBES_LOG = gb.PATH_PROJECT + '/Output/Weather Cubes/Cube_Gen.log'
+    if os.path.isfile(PATH_CUBES_LOG):
+        os.remove(PATH_CUBES_LOG)
+    logging.basicConfig(PATH_CUBES_LOG, level=logging.INFO)
     # temp_data = np.loadtxt(PATH_TEMP_DATA)
     echotop_rootgrp = Dataset(PATH_ECHOTOP_FILE + '', delimiter=',', format='NETCDF4')
 

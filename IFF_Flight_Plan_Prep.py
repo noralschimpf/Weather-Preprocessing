@@ -146,33 +146,63 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     time_waypoints = np.interp(interp_dists, dists, knowntimes)
 
     # Waypoint Linear Interpolation
-    slice_size = int(np.ceil(gb.TARGET_SAMPLE_SIZE / (len(waypoints) - 1)))
-    sample_size = slice_size * (len(waypoints) - 1)
+    sample_size, slice_size = None, None
+    lat_coord, lon_coord, alt_coord, time_coord = None, None, None, None
 
-    lat_coord = np.zeros((sample_size,), dtype=np.float)
-    lon_coord = np.zeros((sample_size,), dtype=np.float)
-    alt_coord = np.zeros((sample_size,), dtype=np.float)
-    time_coord = np.zeros((sample_size,), dtype=np.float)
+    if gb.TARGET_SAMPLE_SIZE > 0:
+        slice_size = int(np.ceil(gb.TARGET_SAMPLE_SIZE / (len(waypoints) - 1)))
+        sample_size = slice_size * (len(waypoints) - 1)
+        lat_coord = np.zeros((sample_size,), dtype=np.float)
+        lon_coord = np.zeros((sample_size,), dtype=np.float)
+        alt_coord = np.zeros((sample_size,), dtype=np.float)
+        time_coord = np.zeros((sample_size,), dtype=np.float)
+        for i in range(1, len(waypoints)):
+            if i < len(waypoints) - 1:
+                lon_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lon_waypoints[i - 1], lon_waypoints[i],
+                                                                             slice_size, endpoint=False)
+                lat_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lat_waypoints[i - 1], lat_waypoints[i],
+                                                                             slice_size, endpoint=False)
+                alt_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(alt_waypoints[i - 1], alt_waypoints[i],
+                                                                             slice_size, endpoint=False)
+                time_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(time_waypoints[i - 1], time_waypoints[i],
+                                                                              slice_size, endpoint=False)
+            else:
+                lon_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lon_waypoints[i - 1], lon_waypoints[i],
+                                                                             slice_size, endpoint=True)
+                lat_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lat_waypoints[i - 1], lat_waypoints[i],
+                                                                             slice_size, endpoint=True)
+                alt_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(alt_waypoints[i - 1], alt_waypoints[i],
+                                                                             slice_size, endpoint=True)
+                time_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(time_waypoints[i - 1], time_waypoints[i],
+                                                                              slice_size, endpoint=True)
+    else:
+        logging.warning(' negative sample size. Using default 1 sample/sec for flight plan')
+        sample_size = int(np.round(knowntimes[1] - knowntimes[0]))
+        samples_per_segment = [int(np.round(time_waypoints[i]-time_waypoints[i-1])) for i in range(1,len(time_waypoints))]
+        lat_coord = np.zeros((sample_size,), dtype=np.float)
+        lon_coord = np.zeros((sample_size,), dtype=np.float)
+        alt_coord = np.zeros((sample_size,), dtype=np.float)
+        time_coord = np.zeros((sample_size,), dtype=np.float)
+        time_coord[0] = time_waypoints[0]
+        for i in range(len(samples_per_segment)):
+            sample_start = int(np.sum(samples_per_segment[:i]))
+            sample_end = int(np.sum(samples_per_segment[:i+1]))
+            endpt = i==len(samples_per_segment)-1
+            time_coord[sample_start:sample_end] = np.linspace(time_coord[sample_start],
+                                                      time_coord[sample_start]+samples_per_segment[i], samples_per_segment[i],
+                                                                endpoint=endpt)
+            lat_coord[sample_start:sample_end] = np.linspace(lat_waypoints[i],lat_waypoints[i+1],
+                                                             samples_per_segment[i],endpoint=endpt)
+            lon_coord[sample_start:sample_end] = np.linspace(lon_waypoints[i], lon_waypoints[i + 1],
+                                                             samples_per_segment[i], endpoint=endpt)
+            alt_coord[sample_start:sample_end] = np.linspace(alt_waypoints[i], alt_waypoints[i + 1],
+                                                             samples_per_segment[i], endpoint=endpt)
 
-    for i in range(1, len(waypoints)):
-        if i < len(waypoints) - 1:
-            lon_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lon_waypoints[i - 1], lon_waypoints[i],
-                                                                         slice_size, endpoint=False)
-            lat_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lat_waypoints[i - 1], lat_waypoints[i],
-                                                                         slice_size, endpoint=False)
-            alt_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(alt_waypoints[i - 1], alt_waypoints[i],
-                                                                         slice_size, endpoint=False)
-            time_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(time_waypoints[i - 1], time_waypoints[i],
-                                                                          slice_size, endpoint=False)
-        else:
-            lon_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lon_waypoints[i - 1], lon_waypoints[i],
-                                                                         slice_size, endpoint=True)
-            lat_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lat_waypoints[i - 1], lat_waypoints[i],
-                                                                         slice_size, endpoint=True)
-            alt_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(alt_waypoints[i - 1], alt_waypoints[i],
-                                                                         slice_size, endpoint=True)
-            time_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(time_waypoints[i - 1], time_waypoints[i],
-                                                                          slice_size, endpoint=True)
+
+
+
+
+
 
     data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T
     gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', save_date, data, modified_filename, orig_filename=file,
@@ -215,7 +245,10 @@ if __name__ == '__main__':
     LEN_NAVAID = 3
     LEN_WAYPOINT = 5
 
-    logging.basicConfig(filename=gb.PATH_PROJECT + '/Output/Flight Plans/FP_Prep.log', level=logging.INFO)
+    PATH_FP_LOG = gb.PATH_PROJECT + '/Output/Flight Plans/FP_Prep.log'
+    if os.path.isfile(PATH_FP_LOG):
+        os.remove(PATH_FP_LOG)
+    logging.basicConfig(filename=PATH_FP_LOG, level=logging.INFO)
     sttime = datetime.datetime.now()
     logging.info(' Started:\t' + sttime.isoformat())
     func_process_file = partial(process_file, gb.PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
