@@ -5,6 +5,7 @@ import Global_Tools as gb
 import os, requests, shutil
 from netCDF4 import num2date
 from concurrent.futures import ProcessPoolExecutor
+import multiprocessing
 from functools import partial
 import datetime
 import logging
@@ -13,8 +14,11 @@ from matplotlib import pyplot as plt
 
 
 def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
-                 LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT, file):
-    data_frame = pd.read_csv(file)
+                 LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT, PATH_LOG, file):
+    logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
+    print('Testing ' + file)
+
+    data_frame = pd.read_csv(file, names=['timestamp','arr/dep?','waypoints'])
     data = data_frame.values
 
     # filter for FP entries containing a Waypoint AND Timestamp
@@ -25,13 +29,15 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     filter = np.hstack((filter_slice1, filter_slice2, filter_slice3, filter_slice4))
     filtered_data = np.delete(data, filter, axis=0)
 
+    if len(filtered_data[:,0]) == 0:
+        logging.error(' no usable entries for ' + file + ". all entries have either a null timestamp or waypoint string")
+        return -1
+
     # Select the last Complete FP entry
-    try:
+    index_last_filed, index_first_filed = 0,0
+    if len(filtered_data[:, 0] > 1):
         index_last_filed = np.where(filtered_data[:, 0] == np.max(filtered_data[:, 0]))
         index_first_filed = np.where(filtered_data[:, 0] == np.min(filtered_data[:, 0]))
-    except ValueError:
-        logging.error(' no usable entries for ' + file)
-        return -1
 
     first_filed_entry = filtered_data[index_first_filed][0]
     last_filed_entry = filtered_data[index_last_filed][0]
@@ -39,12 +45,8 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     # Search for track-point file
     trk_time, trk_lat, trk_lon = None, None, None
     bln_trk_found = False
-    first_filed_time = np.float64(first_filed_entry[0])
-    last_filed_time = np.float64(last_filed_entry[0])
-    first_filed_date = num2date(first_filed_time, units='Seconds since 1970-01-01T00:00:00Z', calendar='gregorian')
-    last_filed_date = num2date(last_filed_time, units='Seconds since 1970-01-01T00:00:00Z', calendar='gregorian')
 
-    # TODO: Fix parent_dir workaround
+
     parent_dir = os.path.abspath(file).split('\\')[-2]
     save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
 
@@ -57,8 +59,9 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     #    PATH_TRACK_POINT = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/' + first_filed_date.isoformat()[:10] + \
     #                       '/' + modified_filename.replace('Flight_Plan', 'Flight_Track')
     #    if not (os.path.isfile(PATH_TRACK_POINT)):
-        logging.warning(' ' + PATH_TRACK_POINT.split('/')[-1] + "not found on " + last_filed_date.isoformat()[:10] + "; cannot associate timestamps")
+        logging.warning(' ' + PATH_TRACK_POINT.split('/')[-1] + " not found on " + save_date.isoformat()[:10] + "; cannot associate timestamps")
         return -1
+
     if os.path.isfile(PATH_TRACK_POINT):
         bln_trk_found = True
         trk_data = np.loadtxt(PATH_TRACK_POINT, delimiter=',', usecols=(0, 1, 2))
@@ -110,7 +113,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
         str_lat = ''
         str_lon = ''
         str_alt = ''
-        lat, lon, alt = 0., 0., 0.
+        lat, lon, alt = np.nan, np.nan, np.nan
 
         # Find and Convert Coordinates
         for tag_result in results_data_rows:
@@ -138,6 +141,18 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
 
         # print(waypoints[i], '\t', "{:10.5f}".format(lat_waypoints[i]), '\t', "{:10.5f}".format(lon_waypoints[i]),
         #      '\t', str(alt_waypoints[i]))
+
+    # filter unfound (NaN) waypoints
+    indices_nan_lat = [x for x in range(len(lat_waypoints)) if np.isnan(lat_waypoints[x])]
+    indices_nan_lon = [x for x in range(len(lon_waypoints)) if np.isnan(lon_waypoints[x])]
+    indices_nan = set(indices_nan_lat + indices_nan_lon)
+
+    lat_waypoints = [lat_waypoints[i] for i in range(len(lat_waypoints)) if not indices_nan.__contains__(i)]
+    waypoints = [waypoints[i] for i in range(len(waypoints)) if not indices_nan.__contains__(i)]
+    lon_waypoints = [lon_waypoints[i] for i in range(len(lon_waypoints)) if not indices_nan.__contains__(i)]
+    alt_waypoints = [alt_waypoints[i] for i in range(len(alt_waypoints)) if not indices_nan.__contains__(i)]
+    time_waypoints = [time_waypoints[i] for i in range(len(time_waypoints)) if not indices_nan.__contains__(i)]
+
 
     # time assignment
     knowntimes = np.array((trk_time[0], trk_time[-1]))
@@ -176,8 +191,8 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
                 time_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(time_waypoints[i - 1], time_waypoints[i],
                                                                               slice_size, endpoint=True)
     else:
-        sample_size = int(np.round(knowntimes[1] - knowntimes[0]))
         samples_per_segment = [int(np.round(time_waypoints[i]-time_waypoints[i-1])) for i in range(1,len(time_waypoints))]
+        sample_size = np.sum(samples_per_segment)
         lat_coord = np.zeros((sample_size,), dtype=np.float)
         lon_coord = np.zeros((sample_size,), dtype=np.float)
         alt_coord = np.zeros((sample_size,), dtype=np.float)
@@ -186,26 +201,26 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
         for i in range(len(samples_per_segment)):
             sample_start = int(np.sum(samples_per_segment[:i]))
             sample_end = int(np.sum(samples_per_segment[:i+1]))
-            endpt = i==len(samples_per_segment)-1
-            time_coord[sample_start:sample_end] = np.linspace(time_coord[sample_start],
-                                                      time_coord[sample_start]+samples_per_segment[i], samples_per_segment[i],
-                                                                endpoint=endpt)
-            lat_coord[sample_start:sample_end] = np.linspace(lat_waypoints[i],lat_waypoints[i+1],
-                                                             samples_per_segment[i],endpoint=endpt)
-            lon_coord[sample_start:sample_end] = np.linspace(lon_waypoints[i], lon_waypoints[i + 1],
-                                                             samples_per_segment[i], endpoint=endpt)
-            alt_coord[sample_start:sample_end] = np.linspace(alt_waypoints[i], alt_waypoints[i + 1],
-                                                             samples_per_segment[i], endpoint=endpt)
-
-
-
-
+            endpt = i == len(samples_per_segment)-1
+            try:
+                time_coord[sample_start:sample_end] = np.linspace(time_coord[sample_start],
+                                                          time_coord[sample_start]+samples_per_segment[i], samples_per_segment[i],
+                                                                    endpoint=endpt)
+                lat_coord[sample_start:sample_end] = np.linspace(lat_waypoints[i],lat_waypoints[i+1],
+                                                                 samples_per_segment[i],endpoint=endpt)
+                lon_coord[sample_start:sample_end] = np.linspace(lon_waypoints[i], lon_waypoints[i + 1],
+                                                                 samples_per_segment[i], endpoint=endpt)
+                alt_coord[sample_start:sample_end] = np.linspace(alt_waypoints[i], alt_waypoints[i + 1],
+                                                                 samples_per_segment[i], endpoint=endpt)
+            except ValueError:
+                logging.exception("message")
+                return -13
 
 
 
     data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T
     gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', save_date, data, modified_filename, orig_filename=file,
-                        bool_delete_original=False)
+                        bool_delete_original=bln_trk_found)
 
     '''
     # Plot Flight Plan to Verify using Basemap
@@ -232,10 +247,11 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     plt.close()
     '''
 
-    #print(file, ' read')
+    print(file + ' read')
 
 
-if __name__ == '__main__':
+
+def main():
     PATH_FLIGHT_PLANS = gb.PATH_PROJECT + '/Data/IFF_Flight_Plans/'
     LINK_NAVAID = 'https://opennav.com/navaid/us/'
     LINK_WAYPOINT = 'https://opennav.com/waypoint/US/'
@@ -245,19 +261,19 @@ if __name__ == '__main__':
     LEN_WAYPOINT = 5
 
     PATH_FP_LOG = gb.PATH_PROJECT + '/Output/Flight Plans/FP_Prep.log'
-    if os.path.isfile(PATH_FP_LOG):
-        os.remove(PATH_FP_LOG)
-    logging.basicConfig(filename=PATH_FP_LOG, level=logging.INFO)
+
+    logging.basicConfig(filename=PATH_FP_LOG, filemode='w', level=logging.INFO)
     logging.warning(' negative sample size. Using default 1 sample/sec for flight plan')
     sttime = datetime.datetime.now()
     logging.info(' Started:\t' + sttime.isoformat())
 
     func_process_file = partial(process_file, gb.PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
-                                LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT)
+                                LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT, PATH_FP_LOG)
 
     os.chdir(PATH_FLIGHT_PLANS)
     data_dirs = [x for x in os.listdir() if not (x == 'Shifted' or x == 'Sorted')]
     for directory in data_dirs:
+        print('\n\nReading from ' + directory)
         os.chdir(directory)
         Flight_Plan_Files = [x for x in os.listdir() if (x.__contains__('Flight_Plan') and x.__contains__('.txt'))]
         files = os.listdir()
@@ -266,8 +282,10 @@ if __name__ == '__main__':
         #for file in Flight_Plan_Files:
         #     func_process_file(file)
 
-        with ProcessPoolExecutor(max_workers=6) as ex:
-            exit_code = ex.map(func_process_file, files)
+        with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
+            exit_log = ex.map(func_process_file, files)
+
+
 
         os.chdir('..')
     os.chdir(PATH_FLIGHT_PLANS)
@@ -283,3 +301,7 @@ if __name__ == '__main__':
     delta = edtime - sttime
     logging.info(' done: ' + edtime.isoformat())
     logging.info(' execution time: ' + str(delta.total_seconds()) + ' s')
+    print('Execution complete. Check log file (' + PATH_FP_LOG + ') for details')
+
+if __name__ == '__main__':
+    main()

@@ -68,8 +68,8 @@ equation ref: https://www.movable-type.co.uk/scripts/latlong.html
 
 
 def haversine(lat2, lat1, delta_lons, rEarth):
-    lat2, lat1, delta_lons = np.radians([lat2, lat1, delta_lons])
-    a = math.sin((lat2 - lat1) / 2) ** 2 + (math.cos(lat1) * math.cos(lat2) * (math.sin(delta_lons / 2) ** 2))
+    lat2_rad, lat1_rad, delta_lons_rad = np.radians([lat2, lat1, delta_lons])
+    a = math.sin((lat2_rad - lat1_rad) / 2) ** 2 + (math.cos(lat1_rad) * math.cos(lat2_rad) * (math.sin(delta_lons_rad / 2) ** 2))
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return rEarth * c / 1000
 

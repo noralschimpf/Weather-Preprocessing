@@ -30,9 +30,16 @@ def unzip_recurse(path_abs_zip : str, path_output_loc : str) -> int:
     os.chdir('../..')
     return 0
 
+def unzip(path_zip):
+    path_dest = os.path.abspath(path_zip)[:-4]
+    print(str(path_zip) + '\t' + str(path_dest))
+    with zipfile.ZipFile(path_zip, 'r') as zip_ref:
+        zip_ref.extractall(path_dest)
+
 if __name__ == '__main__':
-    os.chdir('C:/Users/natha/Downloads/Sherlock Data')
+    os.chdir('C:/Users/natha/Downloads/Flight Plan Data - JFK to LAX')
     unzip_folders = [x for x in os.listdir() if x.__contains__('.zip')]
     unzip_dests = [x[:-4] for x in unzip_folders]
     for i in range(len(unzip_folders)):
-        unzip_recurse(unzip_folders[i], unzip_dests[i])
+        #unzip_recurse(unzip_folders[i], unzip_dests[i])
+        unzip(unzip_folders[i])

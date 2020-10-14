@@ -10,8 +10,10 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 
 
-def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, USES_FORE, fore_start,
+def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, USES_FORE, fore_start, PATH_LOG,
                         file):
+
+    logging.basicConfig(PATH_LOG, filemode='a', level=logging.INFO)
     # Load Flight Data and EchoTop Coordinates
     flight_tr = np.loadtxt(file, delimiter=',')
     flt_time = flight_tr[:, 0]
@@ -236,7 +238,7 @@ if __name__ == '__main__':
     PATH_CUBES_LOG = gb.PATH_PROJECT + '/Output/Weather Cubes/Cube_Gen.log'
     if os.path.isfile(PATH_CUBES_LOG):
         os.remove(PATH_CUBES_LOG)
-    logging.basicConfig(PATH_CUBES_LOG, level=logging.INFO)
+    logging.basicConfig(PATH_CUBES_LOG, filemode='w', level=logging.INFO)
     # temp_data = np.loadtxt(PATH_TEMP_DATA)
     echotop_rootgrp = Dataset(PATH_ECHOTOP_FILE + '', delimiter=',', format='NETCDF4')
 
@@ -252,7 +254,7 @@ if __name__ == '__main__':
         forecast_start = 0
 
     func_process_partial = partial(process_flight_plan, PATH_ECHOTOP_NC, PATH_OUTPUT_CUBES, et_lon, et_lat,
-                                   USES_CURRENT, USES_FORECAST, forecast_start)
+                                   USES_CURRENT, USES_FORECAST, forecast_start, PATH_CUBES_LOG)
 
 
     os.chdir(PATH_COORDS)

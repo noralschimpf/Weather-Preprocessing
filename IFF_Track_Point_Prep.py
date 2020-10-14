@@ -7,14 +7,12 @@ os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessin
 Read Flight Track-Point Files and Plot in Basemap
 """
 
-
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap, addcyclic
 from matplotlib import dates, cm
 from netCDF4 import Dataset, num2date
 import Global_Tools as gb
-
 
 # create Basemap instance
 '''
@@ -29,15 +27,21 @@ m.drawparallels(np.arange(10, 60, 10), labels=[1, 0, 0, 0])
 m.drawmeridians(np.arange(-160, -50, 10), labels=[0, 0, 0, 1])
 '''
 
-#file is local reference, program must enter containing directory
-def process_file(PATH_PROJECT : str, TARGET_SAMPLE_SIZE : int, file : str):
+
+# file is local reference, program must enter containing directory
+def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file: str):
+    logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
+
+    print('processing ' + file)
+
     data = np.loadtxt(file, delimiter=',', usecols=(1, 2, 3, 4))
     data_slicing_incr = int(np.floor(len(data) / gb.TARGET_SAMPLE_SIZE))
-    #data_slicing_incr = 0
+    # data_slicing_incr = 0
 
     times, lats, lons, alts = None, None, None, None
     if (data_slicing_incr == 0):
-        logging.warning(' ' + str(file) + ' length (' + str(len(data)) + ') is too short for target size ' + str(TARGET_SAMPLE_SIZE))
+        logging.warning(' ' + str(file) + ' length (' + str(len(data)) + ') is too short for target size ' + str(
+            TARGET_SAMPLE_SIZE))
         times = data[:, 0]
         lats = data[:, 1]
         lons = data[:, 2]
@@ -61,9 +65,7 @@ def process_file(PATH_PROJECT : str, TARGET_SAMPLE_SIZE : int, file : str):
 
     # Sort and Save file by timestamp
     save_data = np.vstack((times, lats, lons, alts)).T
-    timestamp = num2date(times[0], units="seconds since 1970-01-01T00:00:00", calendar="gregorian")
-
-    # TODO: Fix parent_dir workaround
+    save_data = save_data[save_data[:, 0].argsort()]
     parent_dir = os.path.abspath(file).split('\\')[-2]
     save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
 
@@ -78,29 +80,31 @@ def process_file(PATH_PROJECT : str, TARGET_SAMPLE_SIZE : int, file : str):
     return 0
 
 
-if __name__ == '__main__':
+def main():
     PATH_TRACK_POINTS = gb.PATH_PROJECT + '/data/IFF_Track_Points/'
     PATH_FT_LOG = gb.PATH_PROJECT + '/Output/Flight Tracks/FT_Prep.log'
     if os.path.isfile(PATH_FT_LOG):
         os.remove(PATH_FT_LOG)
-    logging.basicConfig(filename=PATH_FT_LOG, level=logging.INFO)
+    logging.basicConfig(filename=PATH_FT_LOG, filemode='w', level=logging.INFO)
 
     # Open, plot, and downsample each flight-track CSV
     os.chdir(PATH_TRACK_POINTS)
-    if gb.TARGET_SAMPLE_SIZE <=0:
-        logging.warning(' target sample size (' + str(gb.TARGET_SAMPLE_SIZE) + ') <= 0; using default (unaltered) sampling')
+    if gb.TARGET_SAMPLE_SIZE <= 0:
+        logging.warning(
+            ' target sample size (' + str(gb.TARGET_SAMPLE_SIZE) + ') <= 0; using default (unaltered) sampling')
 
     sttime = datetime.datetime.now()
     logging.info(' Starting: ' + sttime.isoformat())
 
     track_objs = [x for x in os.listdir() if not (x == 'Shifted' or x == 'Sorted')]
-    func_process_file = partial(process_file, gb.PATH_PROJECT, gb.TARGET_SAMPLE_SIZE)
+    func_process_file = partial(process_file, gb.PATH_PROJECT, gb.TARGET_SAMPLE_SIZE, PATH_FT_LOG)
 
     for obj in track_objs:
         if os.path.isdir(obj):
+            print('Reading from ' + obj)
             os.chdir(obj)
             track_files = [x for x in os.listdir() if (x.__contains__('Flight_Track') and x.__contains__('.txt'))]
-            #with ProcessPoolExecutor(max_workers=6) as ex:
+            # with ProcessPoolExecutor(max_workers=6) as ex:
             #    return_code = ex.map(func_process_file, track_files)
             for file in track_files:
                 func_process_file(file)
@@ -131,3 +135,8 @@ if __name__ == '__main__':
     delta = edtime - sttime
     logging.info(' Done: ' + edtime.isoformat())
     logging.info(' Execution Time: ' + str(delta.total_seconds()) + ' s')
+    print('Execution complete. Check log file (' + PATH_FT_LOG + ') for details')
+
+
+if __name__ == '__main__':
+    main()
