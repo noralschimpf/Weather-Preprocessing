@@ -1,6 +1,7 @@
 import os, shutil, logging, datetime
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
+import pandas as pd
 
 os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessing\\Library\\share'
 """
@@ -65,7 +66,8 @@ def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file
 
     # Sort and Save file by timestamp
     save_data = np.vstack((times, lats, lons, alts)).T
-    save_data = save_data[save_data[:, 0].argsort()]
+    data_frame = pd.DataFrame(save_data, columns=['times','lats','lons','alts'])
+    save_data = data_frame.sort_values(by=['times']).values
     parent_dir = os.path.abspath(file).split('\\')[-2]
     save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
 

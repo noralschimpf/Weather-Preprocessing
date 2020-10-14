@@ -13,7 +13,7 @@ from functools import partial
 def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, USES_FORE, fore_start, PATH_LOG,
                         file):
 
-    logging.basicConfig(PATH_LOG, filemode='a', level=logging.INFO)
+    logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
     # Load Flight Data and EchoTop Coordinates
     flight_tr = np.loadtxt(file, delimiter=',')
     flt_time = flight_tr[:, 0]
@@ -25,21 +25,32 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
 
     # Generate list of EchoTop Report Times
     flt_startdate = num2date(flt_time[0], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
-    cur_timestamps, fore_timestamps = None, None
+    flt_enddate = num2date(flt_time[-1], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
+    cur_timestamps, fore_timestamps, idx_fore_day_split, idx_cur_day_split = None, None, None, None
     if USES_FORE:
-        PATH_ECHOTOP_FORE_DATE = PATH_ECHOTOP_SORTED + flt_startdate.isoformat()[:10] + '/Forecast/'
+        PATH_ECHOTOP_FORE_DATE = [PATH_ECHOTOP_SORTED + flt_startdate.isoformat()[:10] + '/Forecast/',
+                                    PATH_ECHOTOP_SORTED + flt_enddate.isoformat()[:10] + '/Forecast/']
         if not os.path.isdir(PATH_ECHOTOP_FORE_DATE):
-            logging.error('ERR: No EchoTop Forecast Data for ' + file)
+            logging.error(' EchoTop Forecast Data Does Not Cover ' + file + '(' + flt_startdate.isoformat() + ' - '
+                          + flt_enddate.isoformat() + ')')
             return -1
         fore_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
-                                    calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_FORE_DATE)]
+                                    calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_FORE_DATE[0])]
+        idx_fore_day_split = len(fore_timestamps)
+        fore_timestamps.append([date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
+                                    calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_FORE_DATE[1])])
     if USES_CUR:
-        PATH_ECHOTOP_CUR_DATE = PATH_ECHOTOP_SORTED + flt_startdate.isoformat()[:10] + '/Current/'
-        if not os.path.isdir(PATH_ECHOTOP_CUR_DATE):
-            logging.error('ERR: No EchoTop Current Data for ' + file)
+        PATH_ECHOTOP_CUR_DATE = [PATH_ECHOTOP_SORTED + flt_startdate.isoformat()[:10] + '/Current/',
+                                    PATH_ECHOTOP_SORTED + flt_enddate.isoformat()[:10] + '/Current/']
+        if not (os.path.isdir(PATH_ECHOTOP_CUR_DATE[0]) and os.path.isdir(PATH_ECHOTOP_CUR_DATE[1])):
+            logging.error(' EchoTop Current Data Does Not Cover ' + file + '(' + flt_startdate.isoformat() + ' - '
+                          + flt_enddate.isoformat() + ')')
             return -1
         cur_timestamps = [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
-                                   calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_CUR_DATE)]
+                                   calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_CUR_DATE[0])]
+        idx_cur_day_split = len(cur_timestamps)
+        cur_timestamps.append([date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
+                                   calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_CUR_DATE[1])])
     '''
     # Create Basemap, plot on Latitude/Longitude scale
     m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
@@ -69,14 +80,18 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
             temp_idx = np.argmin((flt_time[i]) % cur_timestamps)
             if temp_idx != idx_cur_et:
                 idx_cur_et = temp_idx
-                PATH_ECHOTOP_CUR = PATH_ECHOTOP_CUR_DATE + os.listdir(PATH_ECHOTOP_CUR_DATE)[idx_cur_et]
+                if idx_cur_et < idx_cur_day_split: idx_cur_day = 0
+                else: idx_day = 1
+                PATH_ECHOTOP_CUR = PATH_ECHOTOP_CUR_DATE[idx_cur_day] + os.listdir(PATH_ECHOTOP_CUR_DATE)[idx_cur_et]
                 et_cur_rootgrp = Dataset(PATH_ECHOTOP_CUR, 'r', format='NetCDF4')
                 et_cur_rootgrp.variables['ECHO_TOP'].set_auto_mask(False)
                 relevant_et[0] = et_cur_rootgrp['ECHO_TOP'][0][0]
                 et_cur_rootgrp.close()
         if USES_FORE:
             idx_fore_et = np.argmin(flt_time[i] % fore_timestamps)
-            PATH_ECHOTOP_FORE = PATH_ECHOTOP_FORE_DATE + os.listdir(PATH_ECHOTOP_FORE_DATE)[idx_fore_et]
+            if idx_fore_et < idx_fore_day_split: idx_fore_day = 0
+            else: idx_fore_day = 1
+            PATH_ECHOTOP_FORE = PATH_ECHOTOP_FORE_DATE[idx_fore_day] + os.listdir(PATH_ECHOTOP_FORE_DATE)[idx_fore_et]
             et_fore_rootgrp = Dataset(PATH_ECHOTOP_FORE, 'r', format='NETCDF4')
             et_fore_timestamps = et_fore_rootgrp['time'][:]
             et_fore_rootgrp.variables['ECHO_TOP'].set_auto_mask(False)
@@ -238,7 +253,7 @@ if __name__ == '__main__':
     PATH_CUBES_LOG = gb.PATH_PROJECT + '/Output/Weather Cubes/Cube_Gen.log'
     if os.path.isfile(PATH_CUBES_LOG):
         os.remove(PATH_CUBES_LOG)
-    logging.basicConfig(PATH_CUBES_LOG, filemode='w', level=logging.INFO)
+    logging.basicConfig(filename=PATH_CUBES_LOG, filemode='w', level=logging.INFO)
     # temp_data = np.loadtxt(PATH_TEMP_DATA)
     echotop_rootgrp = Dataset(PATH_ECHOTOP_FILE + '', delimiter=',', format='NETCDF4')
 
@@ -256,7 +271,7 @@ if __name__ == '__main__':
     func_process_partial = partial(process_flight_plan, PATH_ECHOTOP_NC, PATH_OUTPUT_CUBES, et_lon, et_lat,
                                    USES_CURRENT, USES_FORECAST, forecast_start, PATH_CUBES_LOG)
 
-
+    PATH_COORDS = PATH_COORDS + '2018-11-02'
     os.chdir(PATH_COORDS)
     sttime = datetime.datetime.now()
     dirs = [x for x in os.listdir() if os.path.isdir(x)]
@@ -264,9 +279,11 @@ if __name__ == '__main__':
     #    os.chdir(dir)
     files = os.listdir()
     files = [os.path.abspath('.') + '/' + file for file in files]
-    with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
-        exit_code = ex.map(func_process_partial, files)
-    #    os.chdir('..')
+    #with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
+    #    exit_code = ex.map(func_process_partial, files)
+    for file in files:
+        func_process_partial(file)
+
     os.chdir(gb.PATH_PROJECT)
 
     edtime = datetime.datetime.now()

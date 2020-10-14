@@ -203,8 +203,10 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
             sample_end = int(np.sum(samples_per_segment[:i+1]))
             endpt = i == len(samples_per_segment)-1
             try:
-                time_coord[sample_start:sample_end] = np.linspace(time_coord[sample_start],
-                                                          time_coord[sample_start]+samples_per_segment[i], samples_per_segment[i],
+                if i == 0: start_idx = 0
+                else: start_idx = 1
+                time_coord[sample_start:sample_end] = np.linspace(time_coord[sample_start - start_idx]+start_idx,
+                                                          time_coord[sample_start-start_idx]+start_idx+samples_per_segment[i], samples_per_segment[i],
                                                                     endpoint=endpt)
                 lat_coord[sample_start:sample_end] = np.linspace(lat_waypoints[i],lat_waypoints[i+1],
                                                                  samples_per_segment[i],endpoint=endpt)
