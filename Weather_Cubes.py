@@ -104,7 +104,7 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
             et_fore_rootgrp.close()
 
         # Heading Projection & Ortho for point
-        if i==len(flt_time[:])-1:
+        if i == len(flt_time[:])-1:
             heading = gb.heading_a_to_b(flt_lon[i-1], flt_lat[i-1], flt_lat[i], flt_lon[i])
         else:
             heading = gb.heading_a_to_b(flt_lon[i], flt_lat[i], flt_lat[i + 1], flt_lon[i + 1])
@@ -119,11 +119,11 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
         # Select nearest-available point to determine step-sizes
         et_x, et_y = lons[et_x_idx], lats[et_y_idx]
         et_x_neighbor, et_y_neighbor = -1, -1
-        if (et_x_idx == len(lons) - 1):
+        if et_x_idx == len(lons) - 1:
             et_x_neighbor = et_x_idx - 1
         else:
             et_x_neighbor = et_x_idx + 1
-        if (et_y_idx == len(lats) - 1):
+        if et_y_idx == len(lats) - 1:
             et_y_neighbor = et_y_idx - 1
         else:
             et_y_neighbor = et_y_idx + 1
@@ -171,11 +171,12 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
                     weather_cube_et[idx_][idx_ortho] = relevant_et[t][et_actual_idx_y][et_actual_idx_x]
 
         # Print the max Error between cube points
-        err = np.abs(weather_cube_actual - weather_cube_proj)
-        err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
-        maxerr = err_dist.flatten()[err_dist.argmax()]
-        print("Max Distance Err:\t", "{:10.4f}".format(maxerr), "\t", str(i + 1),
-              ' / ', len(flight_tr[:, 1] - 1), '\t', file.split('/')[-1])
+        if i % 100 == 0:
+            err = np.abs(weather_cube_actual - weather_cube_proj)
+            err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
+            maxerr = err_dist.flatten()[err_dist.argmax()]
+            print("Max Distance Err:\t", "{:10.4f}".format(maxerr), "\t", str(i + 1),
+                  ' / ', len(flight_tr[:, 1] - 1), '\t', file.split('/')[-1])
 
         # Append current cube to list of data
         weather_cubes_lat = np.append(weather_cubes_lat, weather_cube_actual[1])
@@ -202,7 +203,7 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
     file_local = file.split('/')[-1]
     PATH_NC_FILENAME = PATH_OUTPUT + flt_startdate.isoformat()[:10] + '/' + file_local.split('.')[0] + '.nc'
     print('WRITING TO:\t', PATH_NC_FILENAME)
-    if (not os.listdir(PATH_OUTPUT).__contains__(flt_startdate.isoformat()[:10])):
+    if not os.listdir(PATH_OUTPUT).__contains__(flt_startdate.isoformat()[:10]):
         os.mkdir(PATH_OUTPUT + flt_startdate.isoformat()[:10])
     cubes_rootgrp = Dataset(PATH_NC_FILENAME, 'w', type='NetCDF4')
 
