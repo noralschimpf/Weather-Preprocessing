@@ -26,7 +26,9 @@ def profile(fnc):
     return inner
 
 
-def process_file(path_et, file):
+def process_file(path_et: str, file: str, PATH_LOG: str):
+    logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
+
     print('Processing ', file)
     rootgrp_orig = Dataset(file, "r", format="netCDF4")
 
@@ -150,13 +152,16 @@ def process_file(path_et, file):
     rootgrp_orig.close()
     rootgrp_sorted.close()
 
-    print('converted:\t', file)
+    print('converted ' + file)
     return
 
 
 def main():
     PATH_ECHOTOP_RAW = gb.PATH_PROJECT + '\\Data\\EchoTop\\'
-    logging.basicConfig(filename=gb.PATH_PROJECT + '/Output/EchoTop/ET_Prep.log', level=logging.INFO)
+    PATH_NC_LOG = gb.PATH_PROJECT + '/Output/EchoTop/ET_Prep.log'
+    if os.path.isfile(PATH_NC_LOG):
+        os.remove(PATH_NC_LOG)
+    logging.basicConfig(filename=PATH_NC_LOG, filemode='w', level=logging.INFO)
     sttime = datetime.datetime.now()
     logging.info(' Started: ' + sttime.isoformat())
 
@@ -182,6 +187,7 @@ def main():
 
     os.chdir(gb.PATH_PROJECT)
 
+    print('Execution complete. Check log file (' + PATH_NC_LOG + ') for details')
 
 if __name__ == '__main__':
     main()
