@@ -170,7 +170,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
         lat_coord = np.zeros((sample_size,), dtype=np.float)
         lon_coord = np.zeros((sample_size,), dtype=np.float)
         alt_coord = np.zeros((sample_size,), dtype=np.float)
-        time_coord = np.zeros((sample_size,), dtype=np.float)
+        time_coord = np.zeros((sample_size,), dtype=np.int)
         for i in range(1, len(waypoints)):
             if i < len(waypoints) - 1:
                 lon_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lon_waypoints[i - 1], lon_waypoints[i],
@@ -180,7 +180,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
                 alt_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(alt_waypoints[i - 1], alt_waypoints[i],
                                                                              slice_size, endpoint=False)
                 time_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(time_waypoints[i - 1], time_waypoints[i],
-                                                                              slice_size, endpoint=False)
+                                                                              slice_size, endpoint=False, dtype=int)
             else:
                 lon_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(lon_waypoints[i - 1], lon_waypoints[i],
                                                                              slice_size, endpoint=True)
@@ -189,14 +189,14 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
                 alt_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(alt_waypoints[i - 1], alt_waypoints[i],
                                                                              slice_size, endpoint=True)
                 time_coord[(i - 1) * slice_size:i * slice_size] = np.linspace(time_waypoints[i - 1], time_waypoints[i],
-                                                                              slice_size, endpoint=True)
+                                                                              slice_size, endpoint=True, dtype=int)
     else:
         samples_per_segment = [int(np.round(time_waypoints[i]-time_waypoints[i-1])) for i in range(1,len(time_waypoints))]
         sample_size = np.sum(samples_per_segment)
         lat_coord = np.zeros((sample_size,), dtype=np.float)
         lon_coord = np.zeros((sample_size,), dtype=np.float)
         alt_coord = np.zeros((sample_size,), dtype=np.float)
-        time_coord = np.zeros((sample_size,), dtype=np.float)
+        time_coord = np.zeros((sample_size,), dtype=np.int)
         time_coord[0] = time_waypoints[0]
         for i in range(len(samples_per_segment)):
             sample_start = int(np.sum(samples_per_segment[:i]))
@@ -207,7 +207,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
                 else: start_idx = 1
                 time_coord[sample_start:sample_end] = np.linspace(time_coord[sample_start - start_idx]+start_idx,
                                                           time_coord[sample_start-start_idx]+start_idx+samples_per_segment[i], samples_per_segment[i],
-                                                                    endpoint=endpt)
+                                                                    endpoint=endpt, dtype=int)
                 lat_coord[sample_start:sample_end] = np.linspace(lat_waypoints[i],lat_waypoints[i+1],
                                                                  samples_per_segment[i],endpoint=endpt)
                 lon_coord[sample_start:sample_end] = np.linspace(lon_waypoints[i], lon_waypoints[i + 1],
