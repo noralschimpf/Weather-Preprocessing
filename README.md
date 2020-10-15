@@ -51,7 +51,7 @@ All Project parameters are located in `Global_Tools.py`
 * `R_EARTH`: The Earth's radius, in Kilometers, used to map relative data to latitude and longitude coordinates. Currently specified for EchoTop data.
 * `CUBE_SIZE`: Specifies the number of points along each spatial dimension to collect for weather cubes. Currently set to 20, following Pang et. al.
 * `LOOKAHEAD_SECONDS`: Number of seconds to extract weather cubes in advance of. **must be a list**. specifying 0 will read EchoTop reported data. Any non-zero value will read from EchoTop forecasts at the expected times for the flight.
-* `TARGET_SAMPLE_SIZE`: Ideal number of entries per flight file. This number is targetted when downsampling track points or interpolating flight plans. Current value is 500, roughly a quarter the number of entries in a flight from JFK to LAX.
+* `TARGET_SAMPLE_SIZE`: Ideal number of entries per flight file. This number is targetted when downsampling track points or interpolating flight plans. Current value is -500, which defaults generation to 1 sample/second.
 * `FIGURE_FORMAT`: When validation-figures are generated, this specifies the format to save each as. Currently specified as PNG.
 * `PROCESS_MAX`: maximum number of process generated to batch preprocessing. This will more likely be memory-constrained than CPU-constrained.
   * Tested for 1 process with default PyCharm heap (4GB).
