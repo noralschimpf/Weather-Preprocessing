@@ -35,18 +35,52 @@ def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file
 
     print('processing ' + file)
 
-    data = np.loadtxt(file, delimiter=',', usecols=(1, 2, 3, 4))
+    df = pd.read_csv(file, names=['callsign', 'time', 'lat', 'lon', 'alt', 'gndspeed', 'course'])
+    df = df.sort_values(by='time')
+    data = df.values[:, 1:5]
+    del df
+
+    # data = np.loadtxt(file, delimiter=',', usecols=(1, 2, 3, 4))
     data_slicing_incr = int(np.floor(len(data) / gb.TARGET_SAMPLE_SIZE))
     # data_slicing_incr = 0
 
     times, lats, lons, alts = None, None, None, None
     if (data_slicing_incr == 0):
-        logging.warning(' ' + str(file) + ' length (' + str(len(data)) + ') is too short for target size ' + str(
-            TARGET_SAMPLE_SIZE))
         times = data[:, 0]
         lats = data[:, 1]
         lons = data[:, 2]
         alts = data[:, 3]
+
+    if data_slicing_incr < 0:
+        times = np.round(np.asarray(data[:, 0], dtype=np.float)).astype(np.int)
+        lats = data[:, 1]
+        lons = data[:, 2]
+        alts = data[:, 3]
+
+        samples_per_segment = [times[i] - times[i - 1] for i in range(1, len(times))]
+        samples_total = int(np.sum(samples_per_segment))
+
+        times_interp = np.zeros((samples_total,), dtype=np.int)
+        lats_interp = np.zeros((samples_total,), dtype=np.float)
+        lons_interp = np.zeros((samples_total,), dtype=np.float)
+        alts_interp = np.zeros((samples_total,), dtype=np.float)
+
+        for i in range(len(samples_per_segment)):
+            bln_endpt = i == len(samples_per_segment) - 1
+            sample_start = np.sum(samples_per_segment[:i], dtype=np.int)
+            sample_end = np.sum(samples_per_segment[:i + 1], dtype=np.int)
+            times_interp[sample_start:sample_end] = np.linspace(times[i], times[i + 1], samples_per_segment[i],
+                                                                endpoint=bln_endpt)
+            lats_interp[sample_start:sample_end] = np.linspace(lats[i], lats[i + 1], samples_per_segment[i],
+                                                               endpoint=bln_endpt)
+            lons_interp[sample_start:sample_end] = np.linspace(lons[i], lons[i + 1], samples_per_segment[i],
+                                                               endpoint=bln_endpt)
+            alts_interp[sample_start:sample_end] = np.linspace(alts[i], alts[i + 1], samples_per_segment[i],
+                                                               endpoint=bln_endpt)
+        times = times_interp
+        lats = lats_interp
+        lons = lons_interp
+        alts = alts_interp
 
     else:
         data_sliced = data[::data_slicing_incr]
@@ -66,7 +100,7 @@ def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file
 
     # Sort and Save file by timestamp
     save_data = np.vstack((times, lats, lons, alts)).T
-    data_frame = pd.DataFrame(save_data, columns=['times','lats','lons','alts'])
+    data_frame = pd.DataFrame(save_data, columns=['times', 'lats', 'lons', 'alts'])
     save_data = data_frame.sort_values(by=['times']).values
     parent_dir = os.path.abspath(file).split('\\')[-2]
     save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
@@ -91,9 +125,13 @@ def main():
 
     # Open, plot, and downsample each flight-track CSV
     os.chdir(PATH_TRACK_POINTS)
-    if gb.TARGET_SAMPLE_SIZE <= 0:
+    slicing_incr = int(np.floor(len(data) / gb.TARGET_SAMPLE_SIZE))
+    if slicing_incr < 0:
         logging.warning(
-            ' target sample size (' + str(gb.TARGET_SAMPLE_SIZE) + ') <= 0; using default (unaltered) sampling')
+            ' target sample size (' + str(gb.TARGET_SAMPLE_SIZE) + ') < 0; using sampling 1 sample/sec')
+    elif slicing_incr == 0:
+        logging.warning(
+            ' target sample size (' + str(gb.TARGET_SAMPLE_SIZE) + ') == 0; unaltered slicing')
 
     sttime = datetime.datetime.now()
     logging.info(' Starting: ' + sttime.isoformat())
@@ -106,10 +144,10 @@ def main():
             print('Reading from ' + obj)
             os.chdir(obj)
             track_files = [x for x in os.listdir() if (x.__contains__('Flight_Track') and x.__contains__('.txt'))]
-            # with ProcessPoolExecutor(max_workers=6) as ex:
-            #    return_code = ex.map(func_process_file, track_files)
-            for file in track_files:
-                func_process_file(file)
+            with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
+                return_code = ex.map(func_process_file, track_files)
+            # for file in track_files:
+            #    func_process_file(file)
             os.chdir('..')
         elif os.path.isfile(obj) and obj.__contains__('Flight_Track') and obj.__contains__('.txt'):
             process_file(obj)
