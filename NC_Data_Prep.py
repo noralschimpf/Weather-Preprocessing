@@ -7,7 +7,10 @@ import Global_Tools as gb
 from mpl_toolkits.mplot3d import axes3d
 from concurrent import futures
 from functools import partial
-import cProfile, pstats, io, datetime
+import pstats, io, datetime
+'''
+EXCLUDE PROFILER
+import cProfile
 
 def profile(fnc):
     def inner(*args, **kwargs):
@@ -24,7 +27,7 @@ def profile(fnc):
         print(s.getvalue())
         return retval
     return inner
-
+'''
 
 def process_file(path_et: str, file: str, PATH_LOG: str):
     logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)

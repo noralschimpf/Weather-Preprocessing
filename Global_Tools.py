@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import os, re, zipfile
-from line_profiler import LineProfiler
+#from line_profiler import LineProfiler
 
 # Global Constants, specc'd by SHERLOC
 LAT_ORIGIN = 38.
@@ -205,7 +205,8 @@ def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, save_filename
     if bool_delete_original:
         os.remove(orig_filename)
 
-
+'''
+EXCLUDED LINEPROFILER
 # Decorate (@profile) to generate a function profile
 def profile(fnc):
     def inner(*args, **kwargs):
@@ -216,3 +217,4 @@ def profile(fnc):
         return retval
 
     return inner
+'''

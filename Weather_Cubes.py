@@ -1,5 +1,4 @@
 import Global_Tools as gb
-from Global_Tools import profile
 import numpy as np
 import math, os, datetime, logging
 from mpl_toolkits.basemap import Basemap
@@ -8,7 +7,10 @@ from netCDF4 import Dataset, num2date, date2num
 from dateutil import parser as dparser
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
-
+'''
+EXCLUDE PROFILER
+from Global_Tools import profile
+'''
 
 def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, USES_FORE, fore_start, PATH_LOG,
                         file):

@@ -65,7 +65,7 @@ def zip(path_zip):
 
 if __name__ == '__main__':
     #zip Sorted Fligth Plans
-    os.chdir('C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/IFF_Flight_Plans/Sorted')
+    os.chdir('C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/IFF_Track_Points/Sorted')
     dirs = [x for x in os.listdir() if os.path.isdir(x)]
     for dir in dirs:
         zip(dir)

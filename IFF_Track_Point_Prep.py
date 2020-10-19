@@ -46,6 +46,8 @@ def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file
 
     times, lats, lons, alts = None, None, None, None
     if (data_slicing_incr == 0):
+        logging.warning(
+            ' target sample size (' + str(gb.TARGET_SAMPLE_SIZE) + ') == 0; unaltered slicing')
         times = data[:, 0]
         lats = data[:, 1]
         lons = data[:, 2]
@@ -125,13 +127,10 @@ def main():
 
     # Open, plot, and downsample each flight-track CSV
     os.chdir(PATH_TRACK_POINTS)
-    slicing_incr = int(np.floor(len(data) / gb.TARGET_SAMPLE_SIZE))
-    if slicing_incr < 0:
+    if gb.TARGET_SAMPLE_SIZE < 0:
         logging.warning(
             ' target sample size (' + str(gb.TARGET_SAMPLE_SIZE) + ') < 0; using sampling 1 sample/sec')
-    elif slicing_incr == 0:
-        logging.warning(
-            ' target sample size (' + str(gb.TARGET_SAMPLE_SIZE) + ') == 0; unaltered slicing')
+
 
     sttime = datetime.datetime.now()
     logging.info(' Starting: ' + sttime.isoformat())
