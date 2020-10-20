@@ -53,6 +53,7 @@ All Project parameters are located in `Global_Tools.py`
 * `LOOKAHEAD_SECONDS`: Number of seconds to extract weather cubes in advance of. **must be a list**. specifying 0 will read EchoTop reported data. Any non-zero value will read from EchoTop forecasts at the expected times for the flight.
 * `TARGET_SAMPLE_SIZE`: Ideal number of entries per flight file. This number is targetted when downsampling track points or interpolating flight plans. Current value is -500, which defaults generation to 1 sample/second.
 * `FIGURE_FORMAT`: When validation-figures are generated, this specifies the format to save each as. Currently specified as PNG.
+* `BLN_MULTIPROCESS`: Global flag for enabling multiprocessing, default True. Primarily present to ease the developer's forgetfullness.
 * `PROCESS_MAX`: maximum number of process generated to batch preprocessing. This will more likely be memory-constrained than CPU-constrained.
   * Tested for 1 process with default PyCharm heap (4GB).
   * Tested for 4 processes with 10Gb heap. 
