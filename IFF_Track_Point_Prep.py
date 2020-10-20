@@ -149,7 +149,7 @@ def main():
             #    func_process_file(file)
             os.chdir('..')
         elif os.path.isfile(obj) and obj.__contains__('Flight_Track') and obj.__contains__('.txt'):
-            process_file(obj)
+            func_process_file(obj)
 
         # plot show
         '''
