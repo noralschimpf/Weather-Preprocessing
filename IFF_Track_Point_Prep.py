@@ -143,10 +143,12 @@ def main():
             print('Reading from ' + obj)
             os.chdir(obj)
             track_files = [x for x in os.listdir() if (x.__contains__('Flight_Track') and x.__contains__('.txt'))]
-            with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
-                return_code = ex.map(func_process_file, track_files)
-            # for file in track_files:
-            #    func_process_file(file)
+            if gb.BLN_MULTIPROCESS:
+                with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
+                    return_code = ex.map(func_process_file, track_files)
+            else:
+                for file in track_files:
+                    func_process_file(file)
             os.chdir('..')
         elif os.path.isfile(obj) and obj.__contains__('Flight_Track') and obj.__contains__('.txt'):
             func_process_file(obj)
