@@ -1,4 +1,5 @@
 import os, shutil, logging, datetime
+from dateutil import parser as dparse
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import pandas as pd
@@ -105,7 +106,8 @@ def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file
     data_frame = pd.DataFrame(save_data, columns=['times', 'lats', 'lons', 'alts'])
     save_data = data_frame.sort_values(by=['times']).values
     parent_dir = os.path.abspath(file).split('\\')[-2]
-    save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
+    save_date = dparse.parse(parent_dir, fuzzy=True)
+    # save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
 
     PATH_TO_SORTED_TRACKPOINTS = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
     modified_filename = file.split('_')
