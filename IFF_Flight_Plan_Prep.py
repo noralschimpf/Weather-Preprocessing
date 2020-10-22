@@ -264,11 +264,12 @@ def main():
         Flight_Plan_Files = [x for x in os.listdir() if (x.__contains__('Flight_Plan') and x.__contains__('.txt'))]
         files = os.listdir()
 
-        # for file in Flight_Plan_Files:
-        #     func_process_file(file)
-
-        with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
-            exit_log = ex.map(func_process_file, files)
+        if gb.BLN_MULTIPROCESS:
+            with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
+                exit_log = ex.map(func_process_file, files)
+        else:
+            for file in Flight_Plan_Files:
+                func_process_file(file)
 
         os.chdir('..')
     os.chdir(PATH_FLIGHT_PLANS)

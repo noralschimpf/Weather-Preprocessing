@@ -171,11 +171,13 @@ def main():
     os.chdir(PATH_ECHOTOP_RAW)
     process_file_partial = partial(process_file, PATH_ECHOTOP_RAW)
     nc_files = [x for x in os.listdir() if x.__contains__('.nc')]
-    #for file in nc_files:
-    #    process_file_partial(file)
 
-    with futures.ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
-        executor.map(process_file_partial, nc_files)
+    if gb.BLN_MULTIPROCESS:
+        with futures.ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
+            executor.map(process_file_partial, nc_files)
+    else:
+        for file in nc_files:
+            process_file_partial(file)
 
     files_to_delete = [x for x in os.listdir() if not os.path.isdir(x)]
     yndelete = input('delete unsorted files? [y/n]')

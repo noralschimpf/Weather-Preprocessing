@@ -273,12 +273,18 @@ def main():
     dirs = [x for x in os.listdir() if os.path.isdir(x)]
     for dir in dirs:
         os.chdir(dir)
+
         files = [x for x in os.listdir() if os.path.isfile(x)]
         files = [os.path.abspath('.') + '/' + file for file in files]
-        with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
-            exit_code = ex.map(func_process_partial, files)
-    for file in files[:1]:
-        func_process_partial(file)
+
+        if gb.BLN_MULTIPROCESS:
+            with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
+                exit_code = ex.map(func_process_partial, files)
+        else:
+            for file in files:
+                func_process_partial(file)
+
+        os.chdir('..')
 
     os.chdir(gb.PATH_PROJECT)
 
