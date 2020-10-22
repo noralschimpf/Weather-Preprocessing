@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import Global_Tools as gb
 import os, requests, shutil
+from dateutil import parser as dparse
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import datetime
@@ -46,7 +47,8 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     bln_trk_found = False
 
     parent_dir = os.path.abspath(file).split('\\')[-2]
-    save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
+    # save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
+    save_date = dparse.parse(parent_dir, fuzzy=True)
 
     modified_filename = file.split('_')
     if not (modified_filename[0] == 'Flight'): modified_filename.pop(0)
