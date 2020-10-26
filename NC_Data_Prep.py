@@ -8,6 +8,7 @@ from mpl_toolkits.mplot3d import axes3d
 from concurrent import futures
 from functools import partial
 import pstats, io, datetime
+
 '''
 EXCLUDE PROFILER
 import cProfile
@@ -29,7 +30,8 @@ def profile(fnc):
     return inner
 '''
 
-def process_file(path_et: str, file: str, PATH_LOG: str):
+
+def process_file(path_et: str, PATH_LOG: str, file: str):
     logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
 
     print('Processing ', file)
@@ -46,11 +48,11 @@ def process_file(path_et: str, file: str, PATH_LOG: str):
         time = rootgrp_orig.variables["times"][:15]
         time.units = rootgrp_orig.variables["times"].units
         time.calendar = rootgrp_orig.variables["times"].calendar
-        #echotop = rootgrp_orig.variables["ECHO_TOP"][:15]
-        #echotop.units = rootgrp_orig.variables["ECHO_TOP"].units
-        #echotop.scale_factor = rootgrp_orig.variables["ECHO_TOP"].scale_factor
-        #echotop.add_offset = rootgrp_orig.variables["ECHO_TOP"].add_offset
-        #echotop._FillValue = rootgrp_orig.variables["ECHO_TOP"]._FillValue
+        # echotop = rootgrp_orig.variables["ECHO_TOP"][:15]
+        # echotop.units = rootgrp_orig.variables["ECHO_TOP"].units
+        # echotop.scale_factor = rootgrp_orig.variables["ECHO_TOP"].scale_factor
+        # echotop.add_offset = rootgrp_orig.variables["ECHO_TOP"].add_offset
+        # echotop._FillValue = rootgrp_orig.variables["ECHO_TOP"]._FillValue
 
 
     else:
@@ -58,16 +60,14 @@ def process_file(path_et: str, file: str, PATH_LOG: str):
         SIZE_TIME = 1
         time = rootgrp_orig.variables["time"]
         rootgrp_orig.variables["ECHO_TOP"].set_auto_mask(False)
-        #echotop = rootgrp_orig.variables["ECHO_TOP"]
-
-
+        # echotop = rootgrp_orig.variables["ECHO_TOP"]
 
     x0 = rootgrp_orig.variables["x0"][:]
     y0 = rootgrp_orig.variables["y0"][:]
     z0 = rootgrp_orig.variables["z0"]
     fillval = rootgrp_orig.variables['ECHO_TOP']._FillValue
     date = num2date(time[0], units=time.units, calendar=time.calendar)
-    #time = echotop[:], time[:]
+    # time = echotop[:], time[:]
 
     # Save Data as Sorted netCDF4
     str_current_date = date.isoformat()[:10]
@@ -76,7 +76,6 @@ def process_file(path_et: str, file: str, PATH_LOG: str):
     if not os.path.isdir(path_et + '\\Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST):
         os.mkdir(path_et + '\\Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST)
     str_sorted_file = path_et + 'Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST + '\\' + file
-
 
     '''
         Map EchoTop x,y to Lambert Conformal Projection
@@ -133,15 +132,18 @@ def process_file(path_et: str, file: str, PATH_LOG: str):
     rootgrp_sorted.variables['time'].calendar = time.calendar
     rootgrp_sorted.variables['time'] = time
     del time
-    rootgrp_sorted.createVariable('x0', datatype=float, dimensions=('x0'), zlib=True, complevel=6, least_significant_digit=5)
+    rootgrp_sorted.createVariable('x0', datatype=float, dimensions=('x0'), zlib=True, complevel=6,
+                                  least_significant_digit=5)
     rootgrp_sorted.variables['x0'].units = 'degrees longitude'
     rootgrp_sorted.variables['x0'][:] = x0[:]
     del x0
-    rootgrp_sorted.createVariable('y0', datatype=float, dimensions=('y0'), zlib=True, complevel=6, least_significant_digit=5)
+    rootgrp_sorted.createVariable('y0', datatype=float, dimensions=('y0'), zlib=True, complevel=6,
+                                  least_significant_digit=5)
     rootgrp_sorted.variables['y0'].units = 'degrees latitude'
     rootgrp_sorted.variables['y0'][:] = y0[:]
     del y0
-    rootgrp_sorted.createVariable('z0', datatype=float, dimensions=('z0'), zlib=True, complevel=6, least_significant_digit=5)
+    rootgrp_sorted.createVariable('z0', datatype=float, dimensions=('z0'), zlib=True, complevel=6,
+                                  least_significant_digit=5)
     rootgrp_sorted.variables['y0'].units = 'meters'
     rootgrp_sorted.variables['z0'][:] = z0[:]
     del z0
@@ -151,7 +153,7 @@ def process_file(path_et: str, file: str, PATH_LOG: str):
     rootgrp_sorted.variables['ECHO_TOP'].add_offset = rootgrp_orig.variables['ECHO_TOP'].add_offset
     rootgrp_sorted.variables['ECHO_TOP'].scale_factor = rootgrp_orig.variables['ECHO_TOP'].scale_factor
     rootgrp_sorted.variables['ECHO_TOP'][:] = rootgrp_orig.variables['ECHO_TOP'][:SIZE_TIME]
-    #del echotop
+    # del echotop
     rootgrp_orig.close()
     rootgrp_sorted.close()
 
@@ -169,7 +171,7 @@ def main():
     logging.info(' Started: ' + sttime.isoformat())
 
     os.chdir(PATH_ECHOTOP_RAW)
-    process_file_partial = partial(process_file, PATH_ECHOTOP_RAW)
+    process_file_partial = partial(process_file, PATH_ECHOTOP_RAW, PATH_NC_LOG)
     nc_files = [x for x in os.listdir() if x.__contains__('.nc')]
 
     if gb.BLN_MULTIPROCESS:
@@ -183,7 +185,7 @@ def main():
     yndelete = input('delete unsorted files? [y/n]')
     if yndelete.lower() == 'y':
         for file in files_to_delete:
-             os.remove(file)
+            os.remove(file)
 
     edtime = datetime.datetime.now()
     delta = edtime - sttime
@@ -193,6 +195,7 @@ def main():
     os.chdir(gb.PATH_PROJECT)
 
     print('Execution complete. Check log file (' + PATH_NC_LOG + ') for details')
+
 
 if __name__ == '__main__':
     main()
