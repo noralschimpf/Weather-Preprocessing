@@ -34,7 +34,7 @@ def profile(fnc):
 def process_file(path_et: str, PATH_LOG: str, file: str):
     logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
 
-    print('Processing ', file)
+    print('Processing ' + str(file))
     rootgrp_orig = Dataset(file, "r", format="netCDF4")
 
     # Identify as Current or Forecast Data
@@ -43,7 +43,7 @@ def process_file(path_et: str, PATH_LOG: str, file: str):
         SIZE_TIME = 15
         if not file.__contains__('0000Z'):
             rootgrp_orig.close()
-            logging.info(' Skipping ', file)
+            logging.info(' Skipping ' + file)
             return
         time = rootgrp_orig.variables["times"][:15]
         time.units = rootgrp_orig.variables["times"].units
@@ -164,8 +164,6 @@ def process_file(path_et: str, PATH_LOG: str, file: str):
 def main():
     PATH_ECHOTOP_RAW = gb.PATH_PROJECT + '\\Data\\EchoTop\\'
     PATH_NC_LOG = gb.PATH_PROJECT + '/Output/EchoTop/ET_Prep.log'
-    if os.path.isfile(PATH_NC_LOG):
-        os.remove(PATH_NC_LOG)
     logging.basicConfig(filename=PATH_NC_LOG, filemode='w', level=logging.INFO)
     sttime = datetime.datetime.now()
     logging.info(' Started: ' + sttime.isoformat())
@@ -190,7 +188,7 @@ def main():
     edtime = datetime.datetime.now()
     delta = edtime - sttime
     logging.info(' completed: ' + edtime.isoformat())
-    logging.info(' execution time: ', str(delta.total_seconds()) + ' s')
+    logging.info(' execution time: ' + str(delta.total_seconds()) + ' s')
 
     os.chdir(gb.PATH_PROJECT)
 
