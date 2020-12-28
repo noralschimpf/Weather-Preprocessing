@@ -30,7 +30,6 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
     flt_enddate = num2date(flt_time[-1], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
     cur_timestamps, fore_timestamps, idx_fore_day_split, idx_cur_day_split = None, None, None, None
 
-    #TODO: Verify no EchoTop Files are Missing for Flight Duration
     if USES_FORE:
         PATH_ECHOTOP_FORE_DATE = [PATH_ECHOTOP_SORTED + flt_startdate.isoformat()[:10] + '/Forecast/',
                                     PATH_ECHOTOP_SORTED + flt_enddate.isoformat()[:10] + '/Forecast/']
@@ -43,6 +42,16 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
         idx_fore_day_split = len(fore_timestamps)
         fore_timestamps += [date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
                                     calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_FORE_DATE[1])]
+        aligned_fore_start = flt_time[0] + gb.LOOKAHEAD_SECONDS[1]
+        aligned_fore_end = flt_time[-1] + gb.LOOKAHEAD_SECONDS[-1]
+        aligned_fore_start = aligned_fore_start - (aligned_fore_start % gb.FORE_REFRESH_RATE)
+        aligned_fore_end = aligned_fore_end - (aligned_fore_end % gb.FORE_REFRESH_RATE)
+        exp_fore_timestamps = aligned_fore_end - (aligned_fore_end % gb.FORE_REFRESH_RATE)
+
+        diff = set(exp_fore_timestamps) - set(fore_timestamps)
+        if len(diff) > 0:
+            logging.error("EchoTop Forecast Data Missing {} Entries During Flight {} ({} - {})".format(
+                len(diff), file, flt_startdate.isoformat(), flt_enddate.isoformat()))
     if USES_CUR:
         PATH_ECHOTOP_CUR_DATE = [PATH_ECHOTOP_SORTED + flt_startdate.isoformat()[:10] + '/Current/',
                                     PATH_ECHOTOP_SORTED + flt_enddate.isoformat()[:10] + '/Current/']
@@ -55,6 +64,13 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
         idx_cur_day_split = len(cur_timestamps)
         cur_timestamps +=[date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
                                    calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_CUR_DATE[1])]
+        aligned_cur_start = flt_time[0] - (flt_time[0] % 150)
+        aligned_cur_end = flt_time[-1] - (flt_time[-1] % 150)
+        exp_cur_timestamps = np.arange(aligned_cur_start, aligned_cur_end, 150)
+        diff = set(exp_cur_timestamps) - set(cur_timestamps)
+        if len(diff) > 0:
+            logging.error("EchoTop Current Data Missing {} Entries During Flight {} ({} - {})".format(
+                len(diff), file, flt_startdate.isoformat(), flt_enddate.isoformat()))
 
     # Create Basemap, plot on Latitude/Longitude scale
     m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
@@ -248,7 +264,7 @@ def main():
     # open sample Trajectory and Echotop data
     PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Flight_Plans/Sorted/'
     PATH_ECHOTOP_NC = gb.PATH_PROJECT + '/Data/EchoTop/Sorted/'
-    PATH_ECHOTOP_FILE = PATH_ECHOTOP_NC + '2020-06-22/Current/ciws.EchoTop.20200622T230000Z.nc'
+    PATH_ECHOTOP_FILE = PATH_ECHOTOP_NC + '2018-11-01/Current/ciws.EchoTop.20181101T000000Z.nc'
     PATH_TEMP_DATA = gb.PATH_PROJECT + '/Data/TMP_200mb.txt'
     PATH_OUTPUT_CUBES = gb.PATH_PROJECT + '/Output/Weather Cubes/'
     PATH_CUBES_LOG = gb.PATH_PROJECT + '/Output/Weather Cubes/Cube_Gen.log'

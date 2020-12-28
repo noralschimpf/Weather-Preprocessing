@@ -9,9 +9,12 @@ LON_ORIGIN = -98.
 R_EARTH = 6370997
 # TODO: control multiple lookahead values
 LOOKAHEAD_SECONDS = [0.]
+# Forecast refresh rate, in seconds
+# Must be a multiple of 300
+FORE_REFRESH_RATE = 3600
 
 # Path / Project Vars
-BLN_MULTIPROCESS = True
+BLN_MULTIPROCESS = False
 CUBE_SIZE = 20
 TARGET_SAMPLE_SIZE = -500
 PROCESS_MAX = 4
