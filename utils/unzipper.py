@@ -44,7 +44,6 @@ class ErrorNotDir(Error):
 
 def unzip(path_zip):
     path_dest = os.path.abspath(path_zip)[:-4]
-    print(str(path_zip) + '\t' + str(path_dest))
     with zipfile.ZipFile(path_zip, 'r') as zip_ref:
         zip_ref.extractall(path_dest)
 
@@ -64,17 +63,18 @@ def zip(path_zip):
 
 
 if __name__ == '__main__':
+    '''
     #zip Sorted Fligth Plans
     os.chdir('C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/IFF_Track_Points/Sorted')
     dirs = [x for x in os.listdir() if os.path.isdir(x)]
     for dir in dirs:
         zip(dir)
-
     '''
-    os.chdir('C:/Users/natha/Downloads/Flight Plan Data - JFK to LAX')
+
+    os.chdir('F:/Aircraft-Data/CIWS_Echo_Top_November_2018')
     unzip_folders = [x for x in os.listdir() if x.__contains__('.zip')]
     unzip_dests = [x[:-4] for x in unzip_folders]
     for i in range(len(unzip_folders)):
         # unzip_recurse(unzip_folders[i], unzip_dests[i])
+        print(str(unzip_folders[i]) + '\t' + '{}/{}'.format(i, len(unzip_folders)))
         unzip(unzip_folders[i])
-    '''

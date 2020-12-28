@@ -75,7 +75,7 @@ def process_file(path_et: str, PATH_LOG: str, file: str):
         os.mkdir(path_et + '\\Sorted\\' + str_current_date)
     if not os.path.isdir(path_et + '\\Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST):
         os.mkdir(path_et + '\\Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST)
-    str_sorted_file = path_et + 'Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST + '\\' + file
+    str_sorted_file = path_et + 'Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST + '\\' + os.path.split(file)[1]
 
     '''
         Map EchoTop x,y to Lambert Conformal Projection
@@ -170,16 +170,20 @@ def main():
 
     os.chdir(PATH_ECHOTOP_RAW)
     process_file_partial = partial(process_file, PATH_ECHOTOP_RAW, PATH_NC_LOG)
-    nc_files = [x for x in os.listdir() if x.__contains__('.nc')]
+    files_to_delete = []
+    dirs = [x for x in os.listdir('.') if os.path.isdir(x) and not x.__contains__('Sorted')]
+    for dir in dirs:
+        nc_files = ["{}\\{}".format(os.path.abspath(dir),x) for x in os.listdir(dir) if x.__contains__('.nc')]
 
-    if gb.BLN_MULTIPROCESS:
-        with futures.ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
-            executor.map(process_file_partial, nc_files)
-    else:
-        for file in nc_files:
-            process_file_partial(file)
+        if gb.BLN_MULTIPROCESS:
+            with futures.ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
+                executor.map(process_file_partial, nc_files)
+        else:
+            for file in nc_files:
+                process_file_partial(file)
 
-    files_to_delete = [x for x in os.listdir() if not os.path.isdir(x)]
+        files_to_delete.append([os.path.abspath(x) for x in os.listdir() if not os.path.isdir(x)])
+
     yndelete = input('delete unsorted files? [y/n]')
     if yndelete.lower() == 'y':
         for file in files_to_delete:

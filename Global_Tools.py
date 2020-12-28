@@ -25,7 +25,7 @@ xMeterFrom, yMeterFrom should be 1-D, lat,long returned 1-D
 '''
 
 
-def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-90., rEarth=6370997.):
+def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=6370997.):
     lat, long = yMeterFrom, xMeterFrom
     if isinstance(xMeterFrom, list):
         for i in range(0, len(xMeterFrom)):

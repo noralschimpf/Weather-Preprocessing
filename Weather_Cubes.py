@@ -29,6 +29,8 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
     flt_startdate = num2date(flt_time[0], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
     flt_enddate = num2date(flt_time[-1], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
     cur_timestamps, fore_timestamps, idx_fore_day_split, idx_cur_day_split = None, None, None, None
+
+    #TODO: Verify all no EchoTop Files are Missing for Flight Duration
     if USES_FORE:
         PATH_ECHOTOP_FORE_DATE = [PATH_ECHOTOP_SORTED + flt_startdate.isoformat()[:10] + '/Forecast/',
                                     PATH_ECHOTOP_SORTED + flt_enddate.isoformat()[:10] + '/Forecast/']
@@ -53,7 +55,7 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
         idx_cur_day_split = len(cur_timestamps)
         cur_timestamps +=[date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
                                    calendar='gregorian') for x in os.listdir(PATH_ECHOTOP_CUR_DATE[1])]
-    '''
+
     # Create Basemap, plot on Latitude/Longitude scale
     m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
                 resolution='l', area_thresh=1000., projection='lcc',
@@ -66,7 +68,7 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
     m.drawparallels(Parallels, labels=[False, True, True, False])
     m.drawmeridians(Meridians, labels=[True, False, False, True])
     fig2 = plt.gca()
-    '''
+
 
     # Closest-Approximation - From EchoTop
     weather_cubes_time = np.array([], dtype=float)
@@ -75,7 +77,7 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
     weather_cubes_et = np.array([], dtype=float)
 
     print('Data Collection Begin\t', str(datetime.datetime.now()))
-    for i in range(len(flight_tr[:, ])):
+    for i in range(1000,len(flight_tr[:, ])):
 
         # Open EchoTop File Covering the Current Time
         if USES_CUR:
