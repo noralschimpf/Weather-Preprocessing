@@ -41,6 +41,7 @@ def process_file(path_et: str, PATH_LOG: str, file: str):
     if rootgrp_orig.variables.keys().__contains__('forecast_period'):
         STR_SORT_FORECAST = 'Forecast'
         SIZE_TIME = 15
+        # TODO: REWORK TO USE gb.FORE_REFRESH_RATE
         if not file.__contains__('0000Z'):
             rootgrp_orig.close()
             logging.info(' Skipping ' + file)
