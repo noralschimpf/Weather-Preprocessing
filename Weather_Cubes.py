@@ -30,7 +30,7 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
     flt_enddate = num2date(flt_time[-1], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
     cur_timestamps, fore_timestamps, idx_fore_day_split, idx_cur_day_split = None, None, None, None
 
-    #TODO: Verify all no EchoTop Files are Missing for Flight Duration
+    #TODO: Verify no EchoTop Files are Missing for Flight Duration
     if USES_FORE:
         PATH_ECHOTOP_FORE_DATE = [PATH_ECHOTOP_SORTED + flt_startdate.isoformat()[:10] + '/Forecast/',
                                     PATH_ECHOTOP_SORTED + flt_enddate.isoformat()[:10] + '/Forecast/']

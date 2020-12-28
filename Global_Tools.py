@@ -194,7 +194,7 @@ Call from within iterator (for file in os.listdir():)
 '''
 
 
-# TODO: Append/replace file if existing
+
 def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, save_filename, orig_filename='', bool_delete_original=False,
                      bool_append=False):
     if orig_filename=='': orig_filename = save_filename
