@@ -29,7 +29,7 @@ def main():
     os.chdir('../Data/')
     SORTED_FP = os.path.join(os.path.abspath('.'), 'IFF_Flight_Plans', 'Sorted')
     SORTED_FT = os.path.join(os.path.abspath('.'), 'IFF_Track_Points', 'Sorted')
-    DATES = [x for x in os.listdir(SORTED_FP) if os.path.isdir(x)]
+    DATES = [x for x in os.listdir(SORTED_FP) if os.path.isdir(os.path.join(SORTED_FP,x))]
     df_flights = pd.DataFrame(columns=['Callsign','Date','Mean','Std Deviation'])
     for DATE in DATES:
         fp_date = os.path.join(SORTED_FP, DATE)
@@ -48,7 +48,7 @@ def main():
                 print("{}: File Does Not Exist".format(path_fp))
             if not os.path.isfile(path_ft):
                 print("{}: File Does Not Exist".format(path_ft))
-    df_flights.to_csv(os.path.join(os.path.abspath(gb.PATH_PROJECT), 'FP-FT Deviations'))
+    df_flights.to_csv(os.path.join(os.path.abspath(gb.PATH_PROJECT), 'FP-FT Deviations.csv'))
 
 if __name__ == '__main__':
     main()

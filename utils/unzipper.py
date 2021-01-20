@@ -63,18 +63,19 @@ def zip(path_zip):
 
 
 if __name__ == '__main__':
-    '''
-    #zip Sorted Fligth Plans
-    os.chdir('C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/IFF_Track_Points/Sorted')
+
+    # zip Sorted Fligth Plans
+    os.chdir('C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/EchoTop')
     dirs = [x for x in os.listdir() if os.path.isdir(x)]
     for dir in dirs:
         zip(dir)
-    '''
 
-    os.chdir('F:/Aircraft-Data/CIWS_Echo_Top_November_2018')
+    '''
+    os.chdir('C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/EchoTop')
     unzip_folders = [x for x in os.listdir() if x.__contains__('.zip')]
     unzip_dests = [x[:-4] for x in unzip_folders]
     for i in range(len(unzip_folders)):
         # unzip_recurse(unzip_folders[i], unzip_dests[i])
         print(str(unzip_folders[i]) + '\t' + '{}/{}'.format(i, len(unzip_folders)))
         unzip(unzip_folders[i])
+    '''
