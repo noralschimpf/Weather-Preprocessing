@@ -72,6 +72,7 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
             logging.error("EchoTop Current Data Missing {} Entries During Flight {} ({} - {})".format(
                 len(diff), file, flt_startdate.isoformat(), flt_enddate.isoformat()))
 
+    '''
     # Create Basemap, plot on Latitude/Longitude scale
     m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
                 resolution='l', area_thresh=1000., projection='lcc',
@@ -84,7 +85,7 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
     m.drawparallels(Parallels, labels=[False, True, True, False])
     m.drawmeridians(Meridians, labels=[True, False, False, True])
     fig2 = plt.gca()
-
+    '''
 
     # Closest-Approximation - From EchoTop
     weather_cubes_time = np.array([], dtype=float)
@@ -268,8 +269,14 @@ def main():
     PATH_TEMP_DATA = gb.PATH_PROJECT + '/Data/TMP_200mb.txt'
     PATH_OUTPUT_CUBES = gb.PATH_PROJECT + '/Output/Weather Cubes/'
     PATH_CUBES_LOG = gb.PATH_PROJECT + '/Output/Weather Cubes/Cube_Gen.log'
-
-    logging.basicConfig(filename=PATH_CUBES_LOG, filemode='w', level=logging.INFO)
+    fmode = 'w'
+    if os.path.isfile(PATH_CUBES_LOG):
+        overwrite = input("{} exists: overwrite? [y/n]".format(PATH_CUBES_LOG))
+        if overwrite.lower() == 'y':
+            fmode = 'w'
+        elif overwrite.lower() == 'n':
+            fmode == 'a'
+    logging.basicConfig(filename=PATH_CUBES_LOG, filemode=fmode, level=logging.INFO)
 
     echotop_rootgrp = Dataset(PATH_ECHOTOP_FILE + '', delimiter=',', format='NETCDF4')
     et_lon = echotop_rootgrp.variables['x0'][:]
@@ -303,6 +310,10 @@ def main():
                 func_process_partial(file)
 
         os.chdir('..')
+        if dir.__contains__('5'):
+            cont = input("Completed {}: Continue? y/n".format(dir))
+            if cont.lower() == 'n':
+                break
 
     os.chdir(gb.PATH_PROJECT)
 
