@@ -230,8 +230,8 @@ def process_flight_plan(PATH_ECHOTOP_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, 
 
     # Add Dimensions: t, X/YPoints
     cubes_rootgrp.createDimension('time', size=None)
-    cubes_rootgrp.createDimension('XPoints', size=20)
-    cubes_rootgrp.createDimension('YPoints', size=20)
+    cubes_rootgrp.createDimension('XPoints', size=gb.CUBE_SIZE)
+    cubes_rootgrp.createDimension('YPoints', size=gb.CUBE_SIZE)
 
     # Add Variables: t, X/YPoints, lat/lon, echotop
     cubes_rootgrp.createVariable('time', datatype=float, dimensions=('time'))
