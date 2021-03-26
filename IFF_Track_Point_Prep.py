@@ -111,7 +111,7 @@ def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file
 
     PATH_TO_SORTED_TRACKPOINTS = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
     modified_filename = file.split('_')
-    if not (modified_filename[0] == 'Flight'):
+    if not (modified_filename[0] == 'Flight') and len(modified_filename) >= 6:
         modified_filename.pop(0)
     modified_filename = '_'.join(modified_filename)
     gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, save_date, save_data, modified_filename, orig_filename=file,
@@ -144,7 +144,7 @@ def main():
         if os.path.isdir(obj):
             print('Reading from ' + obj)
             os.chdir(obj)
-            track_files = [x for x in os.listdir() if (x.__contains__('Flight_Track') and x.__contains__('.txt'))]
+            track_files = [x for x in os.listdir() if ('_trk.txt' in x)]
             if gb.BLN_MULTIPROCESS:
                 with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
                     return_code = ex.map(func_process_file, track_files)
@@ -152,7 +152,7 @@ def main():
                 for file in track_files:
                     func_process_file(file)
             os.chdir('..')
-        elif os.path.isfile(obj) and obj.__contains__('Flight_Track') and obj.__contains__('.txt'):
+        elif os.path.isfile(obj) and '_trk.txt' in obj:
             func_process_file(obj)
 
         # plot show

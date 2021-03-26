@@ -17,16 +17,13 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
     print('Testing ' + file)
 
-    data_frame = pd.read_csv(file, names=['timestamp', 'arr/dep?', 'waypoints'])
-    data = data_frame.values
+    data_frame = pd.read_csv(file, names=['callsign','flight number','timestamp','waypoints','alt1','alt2'])
 
     # filter for FP entries containing a Waypoint AND Timestamp
-    filter_slice1 = np.where((data[:, 0] == 'Unknown'))
-    filter_slice2 = np.where(data[:, 2] == 'Unknown')
-    filter_slice3 = np.where(pd.isnull(data[:, 0]))
-    filter_slice4 = np.where(pd.isnull(data[:, 2]))
-    filter = np.hstack((filter_slice1, filter_slice2, filter_slice3, filter_slice4))
-    filtered_data = np.delete(data, filter, axis=0)
+    filter_slice1 = data_frame['waypoints'] == 'Unknown'
+    filter_slice2 = pd.isna(data_frame['timestamp'])
+    filter_slice3 = pd.isna(data_frame['alt2'])
+    filtered_data = data_frame[~(filter_slice1 | filter_slice2 | filter_slice3)].values
 
     if len(filtered_data[:, 0]) == 0:
         logging.error(
@@ -35,12 +32,12 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
 
     # Select the last Complete FP entry
     index_last_filed, index_first_filed = 0, 0
-    if len(filtered_data[:, 0] > 1):
-        index_last_filed = np.where(filtered_data[:, 0] == np.max(filtered_data[:, 0]))
-        index_first_filed = np.where(filtered_data[:, 0] == np.min(filtered_data[:, 0]))
+    if len(filtered_data[:, 0]) > 1:
+        index_last_filed = np.where(filtered_data[:, 2] == np.max(filtered_data[:, 2]))[0][-1]
+        index_first_filed = np.where(filtered_data[:, 2] == np.min(filtered_data[:, 2]))[0][0]
 
-    first_filed_entry = filtered_data[index_first_filed][0]
-    last_filed_entry = filtered_data[index_last_filed][0]
+    first_filed_entry = filtered_data[index_first_filed].squeeze()
+    last_filed_entry = filtered_data[index_last_filed].squeeze()
 
     # Search for track-point file
     trk_time, trk_lat, trk_lon = None, None, None
@@ -51,10 +48,12 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     save_date = dparse.parse(parent_dir, fuzzy=True)
 
     modified_filename = file.split('_')
-    if not (modified_filename[0] == 'Flight'): modified_filename.pop(0)
+    if not (modified_filename[0] == 'Flight') and len(modified_filename) >= 6: modified_filename.pop(0)
     modified_filename = '_'.join(modified_filename)
+    modified_filename = modified_filename.replace('Flight_Plan','Flight Track')
+    modified_filename = modified_filename.replace('_fp.txt', '_trk.txt')
     PATH_TRACK_POINT = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/' + save_date.isoformat()[:10] + \
-                       '/' + modified_filename.replace('Flight_Plan', 'Flight_Track')
+                       '/' + modified_filename
     if not (os.path.isfile(PATH_TRACK_POINT)):
         logging.warning(' ' + PATH_TRACK_POINT.split('/')[-1] + " not found on " + save_date.isoformat()[
                                                                                    :10] + "; cannot associate timestamps")
@@ -67,8 +66,8 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
         trk_lat = trk_data[:, 1]
         trk_lon = trk_data[:, 2]
 
-    str_waypoints = first_filed_entry[2]
-    str_final_waypoints = last_filed_entry[2]
+    str_waypoints = first_filed_entry[3]
+    str_final_waypoints = last_filed_entry[3]
     waypoints = gb.clean_waypoints(str_waypoints.split('.', 100))
     # print(waypoints)
 
@@ -118,8 +117,8 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
         lon_waypoints[i] = lon
 
         # Assign approx. Flight Altitude
-        if (alt == 0.):
-            alt_waypoints[i] = 35000.
+        if (alt == 0. or np.isnan(alt)):
+            alt_waypoints[i] = first_filed_entry[5]*100.
         else:
             alt_waypoints[i] = alt
 
@@ -206,8 +205,8 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
                 return -13
 
     data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T
-    gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', save_date, data, modified_filename, orig_filename=file,
-                        bool_delete_original=bln_trk_found)
+    gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', save_date, data, file, orig_filename=file,
+                        bool_delete_original=False)
 
     '''
     # Plot Flight Plan to Verify using Basemap
@@ -261,7 +260,7 @@ def main():
     for directory in data_dirs:
         print('\n\nReading from ' + directory)
         os.chdir(directory)
-        Flight_Plan_Files = [x for x in os.listdir() if (x.__contains__('Flight_Plan') and x.__contains__('.txt'))]
+        Flight_Plan_Files = [x for x in os.listdir() if (x.__contains__('_fp.txt'))]
         files = os.listdir()
 
         if gb.BLN_MULTIPROCESS:
