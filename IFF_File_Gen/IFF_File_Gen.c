@@ -7,6 +7,8 @@
  */
 
 #include <stdio.h>
+#include <dirent.h>
+#include <dir.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -28,6 +30,8 @@
 #define	SUM_DEST			12
 
 #define PLAN_WAYPOINTS		18
+#define PLAN_ALT_FLT		14
+#define PLAN_ALTITUDE		16
 
 #define	FLIGHT_SUMMARY		"2"
 #define	TRACK_POINT			"3"
@@ -104,19 +108,19 @@ int main() {
 	int found_match = 0, track_point_count = 0, cnt = 0, flight_plan_count = 0;
 	double alt_value = 0.0;
 	char str[SIZE_STR], orig[20], dest[20], key[20], entry[20];
-	char ac_lat[20], ac_long[20], ac_alt[20], time_stamp[20], ac_id[20], ac_gnd_spd[20], ac_course[20], waypoints[20000];
+	char ac_lat[20], ac_long[20], ac_alt[20], time_stamp[20], ac_id[20], ac_gnd_spd[20], ac_course[20], fp_altitude[20], fp_alt_float[20], waypoints[20000];
 	char dest_path_track_point[200], dest_path_KML_flight_plan[200],dest_path_flight_plan[200], dest_path_KML_track_point[200];
 
 	// Set the source file path
 //	const char *source_path = "C:\\Users\\eknobloc\\Desktop\\Autonomous Spectrum Study\\Data Engineering\\IFF Flight Track\\IFF_Source.csv";
-	const char *source_path = "C:\\Users\\natha\\Desktop\\IFF_Data\\IFF_USA_20190610_050000_86398.csv";
+	const char *source_path = "F:\\Aircraft-Data\\IFF Data\\2019-01-10 to 2019-01-24\\IFF_USA_20190124_050000_86396.csv";
 
 	// Set the status file path; this txt file provides a summary of what was found in the search. It includes the record number, origin airport, and destination airport
 //	const char *status_path = "C:\\Users\\eknobloc\\Desktop\\Autonomous Spectrum Study\\Data Engineering\\IFF Flight Track\\IFF_Track_Summary.txt";
 	const char *status_path = "C:\\Users\\natha\\Desktop\\IFF_Data\\IFF_Track_Summary.txt";
 	// Set the output file path headers for the txt file and KML file; the file name will be appended with the origin airport, destination airport and aircraft ID
 //	char dest_path_header[] = "C:\\Users\\eknobloc\\Desktop\\Autonomous Spectrum Study\\Data Engineering\\IFF Flight Track\\Flight_Track_";
-	char dest_path_header[] = "C:\\Users\\natha\\Desktop\\IFF_Data\\Flight_Track";
+	char dest_path_header[] = "C:\\Users\\natha\\Desktop\\IFF_Data\\Flight_Track\\2019-01-24\\";
 	// Set the desired origin airport and desired destination airport; always include the terminating '\0' at the end of the string
 	char desired_orig[] = "KLAX\0";
 	char desired_dest[] = "KJFK\0";
@@ -259,6 +263,9 @@ int main() {
 			get_token(str, key, ',', TRK_RECORD_KEY, SIZE_STR);
 			// get Waypoints
 			get_token(str, waypoints, ',', PLAN_WAYPOINTS, SIZE_STR);
+			// get Altitude
+			get_token(str, fp_altitude, ',', PLAN_ALTITUDE, SIZE_STR);
+			get_token(str, fp_alt_float, ',', PLAN_ALT_FLT, SIZE_STR);
 				
 			//If first flight plan entry of the flight
 			if(!flight_plan_count++) {
@@ -299,9 +306,11 @@ int main() {
 				// Write the header text for the KML file
 				write_kml_header(fpdest_KML_plan);
 			}
+
+
 			// Write to output files
 			fprintf(fpdest_KML_plan, "\t\t%s\n", waypoints);
-			fprintf(fpdest_plan, "%s,%s,%s,%s\n", ac_id, key, time_stamp, waypoints);
+			fprintf(fpdest_plan, "%s,%s,%s,%s,%s,%s\n", ac_id, key, time_stamp, waypoints, fp_altitude, fp_alt_float);
 
 		}
 	}
