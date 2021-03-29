@@ -163,7 +163,7 @@ def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
 
 
 def main():
-    PATH_NC_RAW = {'et': gb.PATH_PROJECT + '\\Data\\EchoTop\\', 'vil': gb.PATH_PROJECT + '\\Data\\VIL'}
+    PATH_NC_RAW = {'et': gb.PATH_PROJECT + '\\Data\\EchoTop\\', 'vil': gb.PATH_PROJECT + '\\Data\\VIL\\'}
     products = {'vil': 'VIL', 'et': 'ECHO_TOP'}
     prod = 'vil'
 
