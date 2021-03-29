@@ -4,7 +4,8 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import pandas as pd
 
-os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessing\\Library\\share'
+# os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessing\\Library\\share'
+os.environ['PROJ_LIB'] = 'C:\\Users\\User\\anaconda3\\envs\\z_env\\Library\\share'
 """
 Read Flight Track-Point Files and Plot in Basemap
 """

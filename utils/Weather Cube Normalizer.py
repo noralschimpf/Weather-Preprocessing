@@ -7,11 +7,10 @@ import os
 
 def main():
 
-    # sample_file = 'F:/Aircraft-Data/Weather Cubes/2018-11-01/Flight_Plan_KJFK_KLAX_AAL1.nc'
-    PATH_PROJ = 'F:\\Aircraft-Data\\TorchDir'
-    PATH_FP = os.path.join(PATH_PROJ, 'IFF_Flight_Plans/Sorted')
-    PATH_TP = os.path.join(PATH_PROJ, 'IFF_Track_Points/Sorted')
-    PATH_WC = os.path.join(PATH_PROJ, 'Weather Cubes')
+    PATH_PROJ = 'D:\\NathanSchimpf\\PyCharmProjects\\Weather-Preprocessing'
+    PATH_FP = os.path.join(PATH_PROJ, 'Data\\IFF_Flight_Plans\\Sorted')
+    PATH_TP = os.path.join(PATH_PROJ, 'Data\\IFF_Track_Points\\Sorted')
+    PATH_WC = os.path.join(PATH_PROJ, 'Output\\Weather Cubes')
     filename = 'Data_MinMax.csv'
     abs_filepath = os.path.join(os.path.abspath('.'), filename)
 
