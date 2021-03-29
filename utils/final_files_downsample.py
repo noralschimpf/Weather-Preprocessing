@@ -69,14 +69,14 @@ def downsample_file(decimation_factor: int, abspath: str):
 
 
 def main():
-    rootpath = 'H:/TorchDir'
+    rootpath = 'H:\\TorchDir Archive\\14 Days Unified 1 Second\\'
     dec_rate = 60
     # rootpath = 'F:/Aircraft-Data/Torchdir/'
     os.chdir(rootpath)
     func_process = partial(downsample_file, dec_rate)
 
-    fp_dates = [x for x in os.listdir('IFF_Flight_Plans/Sorted') if os.path.isdir('IFF_Flight_Plans/Sorted/{}'.format(x))]
-    os.chdir('IFF_Flight_Plans/Sorted')
+    fp_dates = [x for x in os.listdir('IFF_Flight_Plans') if os.path.isdir('IFF_Flight_Plans/{}'.format(x))]
+    os.chdir('IFF_Flight_Plans')
     for date in fp_dates:
         print('Flight Plans: {}'.format(date))
         os.chdir(date)
@@ -88,11 +88,11 @@ def main():
             for file in files:
                 func_process(file)
         os.chdir('..')
-    os.chdir('../../')
+    os.chdir('../')
 
 
-    ft_dates = [x for x in os.listdir('IFF_Track_Points/Sorted') if os.path.isdir('IFF_Track_Points/Sorted/{}'.format(x))]
-    os.chdir('IFF_Track_Points/Sorted')
+    ft_dates = [x for x in os.listdir('IFF_Track_Points') if os.path.isdir('IFF_Track_Points/{}'.format(x))]
+    os.chdir('IFF_Track_Points')
     for date in ft_dates:
         print('Flight Tracks: {}'.format(date))
         os.chdir(date)
@@ -104,10 +104,10 @@ def main():
             for file in files:
                 func_process(file)
         os.chdir('..')
-    os.chdir('../../')
+    os.chdir('../')
 
-    wc_dates = [x for x in os.listdir('Weather Cubes/Sorted') if os.path.isdir('Weather Cubes/Sorted/{}'.format(x))]
-    os.chdir('Weather Cubes/Sorted')
+    wc_dates = [x for x in os.listdir('Weather Cubes') if os.path.isdir('Weather Cubes/{}'.format(x))]
+    os.chdir('Weather Cubes')
     for date in wc_dates:
         print('Weather Cubes: {}'.format(date))
         os.chdir(date)
