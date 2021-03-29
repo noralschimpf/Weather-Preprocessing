@@ -31,7 +31,7 @@ def profile(fnc):
 '''
 
 
-def process_file(path_et: str, PATH_LOG: str, file: str):
+def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
     logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
 
     print('Processing ' + str(file))
@@ -49,24 +49,24 @@ def process_file(path_et: str, PATH_LOG: str, file: str):
         time = rootgrp_orig.variables["times"][:15]
         time.units = rootgrp_orig.variables["times"].units
         time.calendar = rootgrp_orig.variables["times"].calendar
-        # echotop = rootgrp_orig.variables["ECHO_TOP"][:15]
-        # echotop.units = rootgrp_orig.variables["ECHO_TOP"].units
-        # echotop.scale_factor = rootgrp_orig.variables["ECHO_TOP"].scale_factor
-        # echotop.add_offset = rootgrp_orig.variables["ECHO_TOP"].add_offset
-        # echotop._FillValue = rootgrp_orig.variables["ECHO_TOP"]._FillValue
+        # echotop = rootgrp_orig.variables[var][:15]
+        # echotop.units = rootgrp_orig.variables[var].units
+        # echotop.scale_factor = rootgrp_orig.variables[var].scale_factor
+        # echotop.add_offset = rootgrp_orig.variables[var].add_offset
+        # echotop._FillValue = rootgrp_orig.variables[var]._FillValue
 
 
     else:
         STR_SORT_FORECAST = 'Current'
         SIZE_TIME = 1
         time = rootgrp_orig.variables["time"]
-        rootgrp_orig.variables["ECHO_TOP"].set_auto_mask(False)
-        # echotop = rootgrp_orig.variables["ECHO_TOP"]
+        rootgrp_orig.variables[var].set_auto_mask(False)
+        # echotop = rootgrp_orig.variables[var]
 
     x0 = rootgrp_orig.variables["x0"][:]
     y0 = rootgrp_orig.variables["y0"][:]
     z0 = rootgrp_orig.variables["z0"]
-    fillval = rootgrp_orig.variables['ECHO_TOP']._FillValue
+    fillval = rootgrp_orig.variables[var]._FillValue
     date = num2date(time[0], units=time.units, calendar=time.calendar)
     # time = echotop[:], time[:]
 
@@ -148,12 +148,12 @@ def process_file(path_et: str, PATH_LOG: str, file: str):
     rootgrp_sorted.variables['y0'].units = 'meters'
     rootgrp_sorted.variables['z0'][:] = z0[:]
     del z0
-    rootgrp_sorted.createVariable('ECHO_TOP', datatype=float, dimensions=('time', 'z0', 'y0', 'x0'), zlib=True,
+    rootgrp_sorted.createVariable(var, datatype=float, dimensions=('time', 'z0', 'y0', 'x0'), zlib=True,
                                   complevel=6, least_significant_digit=5, fill_value=fillval)
-    rootgrp_sorted.variables['ECHO_TOP'].units = rootgrp_orig.variables['ECHO_TOP'].units
-    rootgrp_sorted.variables['ECHO_TOP'].add_offset = rootgrp_orig.variables['ECHO_TOP'].add_offset
-    rootgrp_sorted.variables['ECHO_TOP'].scale_factor = rootgrp_orig.variables['ECHO_TOP'].scale_factor
-    rootgrp_sorted.variables['ECHO_TOP'][:] = rootgrp_orig.variables['ECHO_TOP'][:SIZE_TIME]
+    rootgrp_sorted.variables[var].units = rootgrp_orig.variables[var].units
+    rootgrp_sorted.variables[var].add_offset = rootgrp_orig.variables[var].add_offset
+    rootgrp_sorted.variables[var].scale_factor = rootgrp_orig.variables[var].scale_factor
+    rootgrp_sorted.variables[var][:] = rootgrp_orig.variables[var][:SIZE_TIME]
     # del echotop
     rootgrp_orig.close()
     rootgrp_sorted.close()
@@ -163,14 +163,17 @@ def process_file(path_et: str, PATH_LOG: str, file: str):
 
 
 def main():
-    PATH_ECHOTOP_RAW = gb.PATH_PROJECT + '\\Data\\EchoTop\\'
-    PATH_NC_LOG = gb.PATH_PROJECT + '/Output/EchoTop/ET_Prep.log'
+    PATH_NC_RAW = {'et': gb.PATH_PROJECT + '\\Data\\EchoTop\\', 'vil': gb.PATH_PROJECT + '\\Data\\VIL'}
+    products = {'vil': 'VIL', 'et': 'ECHO_TOP'}
+    prod = 'vil'
+
+    PATH_NC_LOG = gb.PATH_PROJECT + '/Output/{}/{}_Prep.log'.format(products[prod], products[prod])
     logging.basicConfig(filename=PATH_NC_LOG, filemode='w', level=logging.INFO)
     sttime = datetime.datetime.now()
     logging.info(' Started: ' + sttime.isoformat())
 
-    os.chdir(PATH_ECHOTOP_RAW)
-    process_file_partial = partial(process_file, PATH_ECHOTOP_RAW, PATH_NC_LOG)
+    os.chdir(PATH_NC_RAW[prod])
+    process_file_partial = partial(process_file, products[prod], PATH_NC_RAW[prod], PATH_NC_LOG)
     files_to_delete = []
     dirs = [x for x in os.listdir('.') if os.path.isdir(x) and not x.__contains__('Sorted')]
     for dir in dirs:
