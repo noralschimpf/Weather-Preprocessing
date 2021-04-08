@@ -1,6 +1,8 @@
 import numpy as np
 import math
 import os, re, zipfile
+import pygrib
+pygrib.set_definitions_path('C:\\Users\\User\\anaconda3\\envs\\pygrib\\Library\\share\\eccodes\\definitions')
 #from line_profiler import LineProfiler
 
 # Global Constants, specc'd by SHERLOC
@@ -26,6 +28,7 @@ FIGURE_FORMAT = 'png'
 Convert relative position to latitude/longitude coordinates for Basemap
 xMeterFrom, yMeterFrom should be 1-D, lat,long returned 1-D
 '''
+
 
 
 def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=6370997.):
