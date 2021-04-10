@@ -36,7 +36,8 @@ def process_file(logfile, path_sorted, date, file):
     grb_tmp = grfile.select(name='Temperature')
     grb_uwind = grfile.select(name='U component of wind')
     grb_vwind = grfile.select(name='V component of wind')
-    lats, lons = grb_tmp[0]['latitudes'].reshape(1799,1059), grb_tmp[0]['longitudes'].reshape(1799,1059)
+    grbshape = grfile[1].values.shape
+    lats, lons = grb_tmp[0]['latitudes'].reshape(grbshape[0],grbshape[1]), grb_tmp[0]['longitudes'].reshape(grbshape[0], grbshape[1])
     grb_tmp = grb_to_grid(grb_tmp)
     grb_uwind = grb_to_grid(grb_uwind)
     grb_vwind = grb_to_grid(grb_vwind)
@@ -54,16 +55,17 @@ def process_file(logfile, path_sorted, date, file):
         tmp_lvls = [True if x in key else False for x in grb_tmp['levels']]
         uwind_lvls = [True if x in key else False for x in grb_uwind['levels']]
         vwind_lvls = [True if x in key else False for x in grb_vwind['levels']]
-        grb_tmp['data'] = grb_tmp['data'][np.where(tmp_lvls)].transpose(0,2,1)
+        grb_tmp['data'] = grb_tmp['data'][np.where(tmp_lvls)]
         grb_tmp['levels'] = grb_tmp['levels'][np.where(tmp_lvls)]
-        grb_uwind['data'] = grb_uwind['data'][np.where(uwind_lvls)].transpose(0,2,1)
+        grb_uwind['data'] = grb_uwind['data'][np.where(uwind_lvls)]
         grb_uwind['levels'] = grb_uwind['levels'][np.where(uwind_lvls)]
-        grb_vwind['data'] = grb_vwind['data'][np.where(vwind_lvls)].transpose(0,2,1)
+        grb_vwind['data'] = grb_vwind['data'][np.where(vwind_lvls)]
         grb_vwind['levels'] = grb_vwind['levels'][np.where(vwind_lvls)]
 
 
     grb_tmp['levels'] = hpa_to_alt(grb_tmp['levels'])
     grb_uwind['levels'] = hpa_to_alt(grb_uwind['levels'])
+
     grb_vwind['levels'] = hpa_to_alt(grb_vwind['levels'])
 
     if not os.path.isdir(os.path.join(path_sorted,date)):
@@ -73,8 +75,8 @@ def process_file(logfile, path_sorted, date, file):
 
     # Add Dimensions: t, X\\YPoints
     grp_save.createDimension('time', size=1)
-    grp_save.createDimension('x0', size=1799)
-    grp_save.createDimension('y0', size=1059)
+    grp_save.createDimension('x0', size=grbshape[1])
+    grp_save.createDimension('y0', size=grbshape[0])
     grp_save.createDimension('z0', size=len(grb_tmp['levels']))
 
     # Add Variables: t, lat/lon, tmp, u/vwind
@@ -84,13 +86,13 @@ def process_file(logfile, path_sorted, date, file):
     grp_save.variables['time'] = date2num(validtime, units=grp_save['time'].units,
                                           calendar=grp_save['time'].calendar)
 
-    grp_save.createVariable('lons', datatype=float, dimensions=('x0','y0'), zlib=True, complevel=6,
+    grp_save.createVariable('lons', datatype=float, dimensions=('y0','x0'), zlib=True, complevel=6,
                             least_significant_digit=5)
     grp_save.variables['lons'].units = 'degrees longitude'
     grp_save.variables['lons'][:] = lons
     del lons
 
-    grp_save.createVariable('lats', datatype=float, dimensions=('x0','y0'), zlib=True, complevel=6,
+    grp_save.createVariable('lats', datatype=float, dimensions=('y0','x0'), zlib=True, complevel=6,
                             least_significant_digit=5)
     grp_save.variables['lats'].units = 'degrees latitude'
     grp_save.variables['lats'][:] = lats
@@ -102,21 +104,21 @@ def process_file(logfile, path_sorted, date, file):
     grp_save.variables['alt'][:] = grb_tmp['levels']
 
 
-    grp_save.createVariable('uwind', datatype=float, dimensions=('time', 'z0', 'x0', 'y0'), zlib=True,
+    grp_save.createVariable('uwind', datatype=float, dimensions=('time', 'z0', 'y0', 'x0'), zlib=True,
                             complevel=6, least_significant_digit=5)
     grp_save.variables['uwind'].units = grb_uwind['units']
     grp_save.variables['uwind'][:] = grb_uwind['data'].reshape(1, grb_uwind['data'].shape[0],
                                                                grb_uwind['data'].shape[1], grb_uwind['data'].shape[2])
     del grb_uwind
 
-    grp_save.createVariable('vwind', datatype=float, dimensions=('time', 'z0', 'x0', 'y0'), zlib=True,
+    grp_save.createVariable('vwind', datatype=float, dimensions=('time', 'z0', 'y0', 'x0'), zlib=True,
                             complevel=6, least_significant_digit=5)
     grp_save.variables['vwind'].units = grb_vwind['units']
     grp_save.variables['vwind'][:] = grb_vwind['data'].reshape(1,grb_vwind['data'].shape[0],
                                                                grb_vwind['data'].shape[1], grb_vwind['data'].shape[2])
     del grb_vwind
 
-    grp_save.createVariable('tmp', datatype=float, dimensions=('time', 'z0', 'x0', 'y0'), zlib=True,
+    grp_save.createVariable('tmp', datatype=float, dimensions=('time', 'z0', 'y0', 'x0'), zlib=True,
                             complevel=6, least_significant_digit=5)
     grp_save.variables['tmp'].units = grb_tmp['units']
     grp_save.variables['tmp'][:] = grb_tmp['data'].reshape(1,grb_tmp['data'].shape[0],
