@@ -8,6 +8,7 @@ import warnings
 import Global_Tools as gb
 import tqdm
 import os
+import cv2
 import dateutil.parser as dparser
 from functools import partial
 from concurrent import futures
@@ -65,26 +66,25 @@ def xcorr_srcs(src: dict, dest: dict):
                         hrrr_lonkey[:,j] = np.zeros_like(hrrr_lons[:,j])
                 hrrr_croplat = hrrr_lats[np.where(hrrr_latkey)].reshape(1059,-1)
                 hrrr_croplon = hrrr_lons[np.where(hrrr_lonkey)].reshape(1059,-1)
+                del hrrr_latkey; del hrrr_lonkey;
 
 
                 ciws_latkey = np.logical_and(hrrr_croplat.min() <= ciws_lats, ciws_lats <= hrrr_croplat.max())
                 ciws_lonkey = np.logical_and(hrrr_croplon.min() <= ciws_lons, ciws_lons <= hrrr_croplon.max())
                 ciws_key = np.logical_and(np.tile(ciws_lonkey,(3520,1)),np.tile(ciws_latkey,(5120,1)).T)
-
-                # Generate Cropped Grid for
-                ciws_croplat = ciws_lats[np.where(ciws_latkey)]
-                ciws_croplon = ciws_lons[np.where(ciws_lonkey)]
-                mciws_croplon, mciws_croplat = np.meshgrid(ciws_croplon, ciws_croplat)
+                del hrrr_croplon; del hrrr_croplat;
 
                 # Cropped Data
                 ciws_crop = np.stack([ciwsgrp[x][np.where(ciws_key)].reshape(np.sum(ciws_latkey),np.sum(ciws_lonkey)) for x in range(ciwsgrp.shape[0])])
                 hrrr_crop = np.stack([hrrrgrp[x][np.where(hrrr_key)].reshape(1059,-1) for x in range(hrrrgrp.shape[0])])
-
+                del ciws_key; del hrrr_key; del ciws_latkey; del ciws_lonkey;
 
                 ## Interpolate Cropped Grids to Match Dimensions
-                hrrr_gridin = np.stack([hrrr_croplat.reshape(-1), hrrr_croplon.reshape(-1)])
-                hrrr_interp = np.stack([interpolate.griddata(hrrr_gridin.T, hrrr_crop[x].reshape(-1), (mciws_croplat, mciws_croplon), method='nearest')
-                               for x in range(hrrr_crop.shape[0])])
+                pts1 = np.float32([[0,0],[0,hrrr_crop.shape[2]],[hrrr_crop.shape[1],0],[hrrr_crop.shape[1],hrrr_crop.shape[2]]])
+                pts2 = np.float32([[0,0],[0,ciws_crop.shape[2]],[ciws_crop.shape[1], 0],[ciws_crop.shape[1], ciws_crop.shape[2]]])
+                M = cv2.getPerspectiveTransform(pts1,pts2)
+                hrrr_interp = np.stack([cv2.warpPerspective(hrrr_crop[x],M, (ciws_crop.shape[2],ciws_crop.shape[1])) for x in range(hrrr_crop.shape[0])])
+                del hrrr_crop
 
                 # Expand Elevation
                 ## ET: Acerage score over all lower altitudes
@@ -120,7 +120,7 @@ def xcorr_srcs(src: dict, dest: dict):
 
     np.savetxt('xcorr_conus_{}-{}.txt'.format(src['product'],dest['product']),np.asarray(conus_xcorrs),delimiter=',')
     plt.hist(conus_xcorrs)
-    plt.title('Cross-Correlation of Matching CONUS Measurements, {}-{]'.format(src['product'], dest['product']))
+    plt.title('Cross-Correlation of Matching CONUS Measurements, {}-{}'.format(src['product'], dest['product']))
     plt.xlabel('Cross-Correlation of Measurements')
     plt.ylabel('Count')
     plt.savefig('CONUS XCorr {}-{}.png'.format(src['product'],dest['product']),dpi=300)
@@ -152,8 +152,8 @@ def main():
     vwind_dict = {'path':PATH_CONUS_HRRR, 'product': 'vwind', 'scaler': vwindnorm}
     tmp_dict = {'path': PATH_CONUS_HRRR, 'product': 'tmp', 'scaler': tmpnorm}
 
-    dsets = [et_dict, vil_dict, uwind_dict, vwind_dict, tmp_dict]
-    dsets_dest = [uwind_dict, tmp_dict, et_dict, vil_dict, vwind_dict]
+    dsets = [et_dict, vil_dict, tmp_dict]
+    dsets_dest = [uwind_dict, vwind_dict, tmp_dict]
     for src in dsets:
         if gb.BLN_MULTIPROCESS:
             func_xcorr = partial(xcorr_srcs, src)
