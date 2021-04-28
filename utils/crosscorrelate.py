@@ -116,15 +116,25 @@ def xcorr_srcs(src: dict, dest: dict):
             srcdat = src['scaler'].transform(srcdat.reshape(-1,1)).reshape(-1, srcdat.shape[1], srcdat.shape[2])
             destdat = dest['scaler'].transform(destdat.reshape(-1,1)).reshape(-1, destdat.shape[1], destdat.shape[2])
             for z in range(srcdat.shape[0]):
-                conus_xcorrs.append(correlate2d(srcdat[z],destdat[z],mode='valid').squeeze()/srcdat[z].size)
+                # For collecting coefficients across all date-ranges
+                #conus_xcorrs.append(correlate2d(srcdat[z],destdat[z],mode='valid').squeeze()/srcdat[z].size)
 
-    np.savetxt('xcorr_conus_{}-{}.txt'.format(src['product'],dest['product']),np.asarray(conus_xcorrs),delimiter=',')
+                # For sample Xcorr heatmap of the given timestamp
+                xcorrcoef = np.corrcoef(srcdat[z],destdat[z])
+                plt.imshow(xcorrcoef)
+                plt.title('Pearson Correlation Coefficients {}-{} Z={}'.format(src['product'],dest['product'],z))
+                plt.colorbar(); plt.savefig('xcorr-heatmap {}-{}.png'.format(src['product'],dest['product']));
+                plt.close(); plt.cla(); plt.clf();
+                return
+
+    #For collecting coefficients across all date-ranges
+    ''' np.savetxt('xcorr_conus_{}-{}.txt'.format(src['product'],dest['product']),np.asarray(conus_xcorrs),delimiter=',')
     plt.hist(conus_xcorrs)
     plt.title('Cross-Correlation of Matching CONUS Measurements, {}-{}'.format(src['product'], dest['product']))
     plt.xlabel('Cross-Correlation of Measurements')
     plt.ylabel('Count')
     plt.savefig('CONUS XCorr {}-{}.png'.format(src['product'],dest['product']),dpi=300)
-    plt.close()
+    plt.close()'''
 
 
 def main():
@@ -153,7 +163,7 @@ def main():
     tmp_dict = {'path': PATH_CONUS_HRRR, 'product': 'tmp', 'scaler': tmpnorm}
 
     dsets = [et_dict, vil_dict, tmp_dict]
-    dsets_dest = [uwind_dict, vwind_dict, tmp_dict]
+    dsets_dest = [et_dict, vil_dict, uwind_dict, vwind_dict, tmp_dict]
     for src in dsets:
         if gb.BLN_MULTIPROCESS:
             func_xcorr = partial(xcorr_srcs, src)

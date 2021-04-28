@@ -16,10 +16,10 @@ LOOKAHEAD_SECONDS = [0.]
 FORE_REFRESH_RATE = 3600
 
 # Path / Project Vars
-BLN_MULTIPROCESS = True
+BLN_MULTIPROCESS = False
 CUBE_SIZE = 20
 TARGET_SAMPLE_SIZE = -500
-PROCESS_MAX = 12
+PROCESS_MAX = 2
 PATH_PROJECT = os.path.abspath('.')
 FIGURE_FORMAT = 'png'
 
@@ -46,7 +46,16 @@ def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=637099
 
     return lat, long
 
-
+''' #TODO: REVISIT
+def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=6370997.):
+    magnitudes, headings = np.sqrt(xMeterFrom**2 + yMeterFrom**2), np.arctan(yMeterFrom/xMeterFrom)
+    dist = magnitudes/rEarth
+    lat_new = lat_0 + dist*np.cos(headings)
+    d_psi = np.log(np.tan(np.pi/4 + lat_new/2)/np.tan(np.pi/4 + lat_0/2))
+    q = (lat_new-lat_0)/d_psi
+    long_new = long_0 + dist*np.sin(headings)/q
+    return lat_new, long_new
+'''
 '''
 Project heading based on lat/lon pairs a->b
 alg reference: https://www.movable-type.co.uk/scripts/latlong.html
