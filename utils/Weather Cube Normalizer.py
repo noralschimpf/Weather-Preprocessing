@@ -10,7 +10,7 @@ def main():
     PATH_PROJ = 'D:\\NathanSchimpf\\PyCharmProjects\\Weather-Preprocessing'
     PATH_FP = os.path.join(PATH_PROJ, 'Data\\IFF_Flight_Plans\\Sorted')
     PATH_TP = os.path.join(PATH_PROJ, 'Data\\IFF_Track_Points\\Sorted')
-    PATH_WC = os.path.join(PATH_PROJ, 'Output\\Weather Cubes')
+    PATH_WC = os.path.join(PATH_PROJ, 'Output\\Weather Cubes\\VIL')
     filename = 'Data_MinMax.csv'
     abs_filepath = os.path.join(os.path.abspath('.'), filename)
 
@@ -27,12 +27,12 @@ def main():
                 grp = Dataset(wc_abspath, 'r', format='netCDF4')
                 if len(grp['Latitude']) > 0:
                     nda_tmp = np.array([grp['Latitude'][:].min(), grp['Latitude'][:].max(), grp['Longitude'][:].min(),
-                                        grp['Longitude'][:].max(), grp['Echo_Top'][:].min(), grp['Echo_Top'][:].max()])
+                                        grp['Longitude'][:].max(), grp['VIL'][:].min(), grp['VIL'][:].max()])
                     nda_tmp = nda_tmp.reshape((6,1))
                     nda_minmax = np.hstack((nda_minmax, nda_tmp))
                 grp.close()
 
-
+        '''
         # for every flight plan, Log the Minimum/Maximum latitude, longitude, altitude
         fp_dates = [x for x in os.listdir(PATH_FP) if os.path.isdir(os.path.join(PATH_FP, x))]
         for dir in tqdm.tqdm(fp_dates):
@@ -63,7 +63,7 @@ def main():
 
         # Save log and identify overall min/max latitude, longitude, altitude
         print('Saving Metadata to CSV')
-        np.savetxt(abs_filepath, nda_minmax, fmt='%f', delimiter=',', newline='\n')
+        np.savetxt(abs_filepath, nda_minmax, fmt='%f', delimiter=',', newline='\n')'''
 
 
     print('Generating MinMaxScalers')
@@ -74,11 +74,13 @@ def main():
     lat_scaler = MinMaxScaler(feature_range=[0,1])
     lon_scaler = MinMaxScaler(feature_range=[0,1])
     alt_scaler = MinMaxScaler(feature_range=[0,1])
+    vil_scaler = MinMaxScaler(feature_range=[0,1])
+    vil_scaler.fit(np.array([[-.00244140625],[80]]))
     lat_scaler.fit(nda_minmax[0,:].reshape(-1,1))
     lon_scaler.fit(nda_minmax[1,:].reshape(-1,1))
     alt_scaler.fit(nda_minmax[2,:].reshape(-1,1))
 
-
+    '''
     # Scale every Flight Plan
     fp_dates = [x for x in os.listdir(PATH_FP) if os.path.isdir(os.path.join(PATH_FP, x))]
     for dir in tqdm.tqdm(fp_dates, desc='scaling flight plans'):
@@ -105,7 +107,7 @@ def main():
                 nda_tp[:,2] = lon_scaler.transform(nda_tp[:,2].reshape(-1,1)).reshape(-1)
                 nda_tp[:,3] = alt_scaler.transform(nda_tp[:,3].reshape(-1,1)).reshape(-1)
             np.savetxt(tp_abspath, nda_tp, delimiter=',', newline='\n')
-
+    '''
 
     # Scale every Weather Cube
     wc_dates = [x for x in os.listdir(PATH_WC) if os.path.isdir(os.path.join(PATH_WC, x))]
@@ -117,7 +119,7 @@ def main():
             if len(grp['Latitude']) > 0:
                 grp['Latitude'][:] = lat_scaler.transform(grp['Latitude'][:].reshape(-1,1)).reshape(-1,20,20)
                 grp['Longitude'][:] = lon_scaler.transform(grp['Longitude'][:].reshape(-1,1)).reshape(-1,20,20)
-                grp['Echo_Top'][:] = alt_scaler.transform(grp['Echo_Top'][:].reshape(-1,1)).reshape(-1,20,20)
+                grp['VIL'][:] = vil_scaler.transform(grp['VIL'][:].reshape(-1,1)).reshape(-1,20,20)
             grp.close()
 
     print('Done')
