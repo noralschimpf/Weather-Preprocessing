@@ -65,7 +65,7 @@ def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
 
     x0 = rootgrp_orig.variables["x0"][:]
     y0 = rootgrp_orig.variables["y0"][:]
-    z0 = rootgrp_orig.variables["z0"]
+    z0 = rootgrp_orig.variables["z0"][:]
     fillval = rootgrp_orig.variables[var]._FillValue
     date = num2date(time[0], units=time.units, calendar=time.calendar)
     # time = echotop[:], time[:]
@@ -85,8 +85,8 @@ def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
         '''
     y0, x0 = gb.rel_to_latlong(x0[:], y0[:], gb.LAT_ORIGIN, gb.LON_ORIGIN, gb.R_EARTH)
 
-    '''
-    PLOT_ONLY:
+
+    '''# PLOT_ONLY:
     # Create Basemap, plot on Latitude\\Longitude scale
     m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
                 resolution='l', area_thresh=1000., projection='lcc',
@@ -102,22 +102,22 @@ def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
     m.drawparallels(Parallels, labels=[False, True, True, False])
     m.drawmeridians(Meridians, labels=[True, False, False, True])
     fig2 = plt.gca()
-    '''
+
 
     # PLOT_ONLY:x_long_mesh, y_lat_mesh = np.meshgrid(x_lon, y_lat)
 
-    '''
-    PLOT_ONLY:
+
+    # PLOT_ONLY:
     # Define filled contour levels and plot
     color_levels = np.arange(-1e3, 10e3, 1e3)
-    ET_Lambert_Contour = m.contourf(x_long_mesh, y_lat_mesh, echotop[0][0], color_levels, latlon=True, cmap=cm.coolwarm)
+    ET_Lambert_Contour = m.contourf(x0, y0, rootgrp_orig['ECHO_TOP'][0][0], color_levels, latlon=True, cmap=cm.coolwarm)
     m.colorbar(ET_Lambert_Contour, location='right', pad='5%')
     plt.show(block=False)
     PATH_FIGURE_PROJECTION = gb.PATH_PROJECT + '\\Output\\EchoTop_Projected\\' \
                              + dates[0].isoformat().replace(':', '_') + '.' + gb.FIGURE_FORMAT
     plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)
-    plt.close()
-    '''
+    plt.close()'''
+
 
     rootgrp_sorted = Dataset(str_sorted_file, 'w', format="NETCDF4")
 
@@ -133,19 +133,19 @@ def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
     rootgrp_sorted.variables['time'].calendar = time.calendar
     rootgrp_sorted.variables['time'] = time
     del time
-    rootgrp_sorted.createVariable('x0', datatype=float, dimensions=('x0'), zlib=True, complevel=6,
+    rootgrp_sorted.createVariable('lons', datatype=float, dimensions=('y0','x0'), zlib=True, complevel=6,
                                   least_significant_digit=5)
     rootgrp_sorted.variables['x0'].units = 'degrees longitude'
     rootgrp_sorted.variables['x0'][:] = x0[:]
     del x0
-    rootgrp_sorted.createVariable('y0', datatype=float, dimensions=('y0'), zlib=True, complevel=6,
+    rootgrp_sorted.createVariable('lats', datatype=float, dimensions=('y0','x0'), zlib=True, complevel=6,
                                   least_significant_digit=5)
     rootgrp_sorted.variables['y0'].units = 'degrees latitude'
     rootgrp_sorted.variables['y0'][:] = y0[:]
     del y0
-    rootgrp_sorted.createVariable('z0', datatype=float, dimensions=('z0'), zlib=True, complevel=6,
+    rootgrp_sorted.createVariable('alt', datatype=float, dimensions=('z0'), zlib=True, complevel=6,
                                   least_significant_digit=5)
-    rootgrp_sorted.variables['y0'].units = 'meters'
+    rootgrp_sorted.variables['z0'].units = 'meters'
     rootgrp_sorted.variables['z0'][:] = z0[:]
     del z0
     rootgrp_sorted.createVariable(var, datatype=float, dimensions=('time', 'z0', 'y0', 'x0'), zlib=True,
@@ -165,7 +165,7 @@ def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
 def main():
     PATH_NC_RAW = {'et': gb.PATH_PROJECT + '\\Data\\EchoTop\\', 'vil': gb.PATH_PROJECT + '\\Data\\VIL\\'}
     products = {'vil': 'VIL', 'et': 'ECHO_TOP'}
-    prod = 'vil'
+    prod = 'et'
 
     PATH_NC_LOG = gb.PATH_PROJECT + '/Output/{}/{}_Prep.log'.format(products[prod], products[prod])
     logging.basicConfig(filename=PATH_NC_LOG, filemode='w', level=logging.INFO)

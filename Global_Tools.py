@@ -31,7 +31,7 @@ xMeterFrom, yMeterFrom should be 1-D, lat,long returned 1-D
 
 
 
-def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=6370997.):
+'''def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=6370997.):
     lat, long = yMeterFrom, xMeterFrom
     if isinstance(xMeterFrom, list):
         for i in range(0, len(xMeterFrom)):
@@ -44,18 +44,28 @@ def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=637099
     else:
         lat = lat_0 + (yMeterFrom / rEarth) * (180 / np.pi)
 
-    return lat, long
+    return lat, long'''
 
-''' #TODO: REVISIT
+ #TODO: REVISIT
 def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=6370997.):
-    magnitudes, headings = np.sqrt(xMeterFrom**2 + yMeterFrom**2), np.arctan(yMeterFrom/xMeterFrom)
-    dist = magnitudes/rEarth
+    lat_0, long_0 = lat_0*(np.pi/180), long_0*(np.pi/180)
+    xMeterFrom,yMeterFrom = map(np.array, np.meshgrid(xMeterFrom,yMeterFrom))
+    magnitudes, headings = np.sqrt(xMeterFrom**2 + yMeterFrom**2), np.arctan2(xMeterFrom,yMeterFrom)
+    dist = (magnitudes/rEarth)
     lat_new = lat_0 + dist*np.cos(headings)
+    #latnew_rad, lat0_rad = lat_new * (np.pi/180), lat_0 * (np.pi/180)
+
     d_psi = np.log(np.tan(np.pi/4 + lat_new/2)/np.tan(np.pi/4 + lat_0/2))
-    q = (lat_new-lat_0)/d_psi
+
+    q = np.array(d_psi)
+    #q[q<=10e-12] = np.cos(q[q<=10e-12])
+    #q[q > 10e-12] = (lat_new[q>10e-12] - lat_0)/q[q > 10e-12]
+    q = (lat_new - lat_0)/q
+
     long_new = long_0 + dist*np.sin(headings)/q
+    lat_new = lat_new*(180/np.pi); long_new = long_new*(180/np.pi);
     return lat_new, long_new
-'''
+
 '''
 Project heading based on lat/lon pairs a->b
 alg reference: https://www.movable-type.co.uk/scripts/latlong.html
