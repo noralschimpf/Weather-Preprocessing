@@ -1,8 +1,8 @@
 import Global_Tools as gb
 import numpy as np
 import math, os, datetime, logging
-from mpl_toolkits.basemap import Basemap
-from matplotlib import pyplot as plt
+#from mpl_toolkits.basemap import Basemap
+#from matplotlib import pyplot as plt
 from netCDF4 import Dataset, num2date, date2num
 from dateutil import parser as dparser
 from concurrent.futures import ProcessPoolExecutor
@@ -12,27 +12,13 @@ EXCLUDE PROFILER
 from Global_Tools import profile
 '''
 
-def process_flight_plan(var, PATH_DATA_SORTED, PATH_OUTPUT, lons, lats, USES_CUR, USES_FORE, fore_start, PATH_LOG,
-                        file):
 
-    logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
-    # Load Flight Data and EchoTop Coordinates
-    flight_tr = np.loadtxt(file, delimiter=',')
-    flt_time = flight_tr[:, 0]
-    flt_lat = flight_tr[:, 1]
-    flt_lon = flight_tr[:, 2]
-
-    relevant_data = np.zeros((len(gb.LOOKAHEAD_SECONDS), len(lats), len(lons)), dtype=float)
-    idx_cur_data, idx_forecast_times = None, [-1] * (len(gb.LOOKAHEAD_SECONDS) - fore_start)
-
-    # Generate list of EchoTop Report Times
-    flt_startdate = num2date(flt_time[0], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
-    flt_enddate = num2date(flt_time[-1], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
-    cur_timestamps, fore_timestamps, idx_fore_day_split, idx_cur_day_split = None, None, None, None
-
+def get_relevant_timestamps(flt_startdate, flt_enddate, flt_time, file, var, PATH_DATA_SORTED, USES_FORE, USES_CUR):
+    fore_timestamps = cur_timestamps = []
+    idx_cur_day_split, idx_fore_day_split = None,None
     if USES_FORE:
         PATH_DATA_FORE_DATE = [PATH_DATA_SORTED + flt_startdate.isoformat()[:10] + '/Forecast/',
-                                  PATH_DATA_SORTED + flt_enddate.isoformat()[:10] + '/Forecast/']
+                               PATH_DATA_SORTED + flt_enddate.isoformat()[:10] + '/Forecast/']
         if not os.path.isdir(PATH_DATA_FORE_DATE):
             logging.error(' EchoTop Forecast Data Does Not Cover ' + file + '(' + flt_startdate.isoformat() + ' - '
                           + flt_enddate.isoformat() + ')')
@@ -49,6 +35,12 @@ def process_flight_plan(var, PATH_DATA_SORTED, PATH_OUTPUT, lons, lats, USES_CUR
             idx_fore_day_split = len(fore_timestamps)
             fore_timestamps += [date2num(dparser.parse(x[-23:-3].replace('_','')), units='Seconds since 1970-01-01T00:00:00',
                                          calendar='gregorian') for x in os.listdir(PATH_DATA_FORE_DATE[1])]
+        elif var == 'HRRR':
+            fore_timestamps = [date2num(dparser.parse(x.split('.')[1]), units='Seconds since 1970-01-01T00:00:00',
+                                        calendar='gregorian') for x in os.listdir(PATH_DATA_FORE_DATE[0])]
+            idx_fore_day_split = len(fore_timestamps)
+            fore_timestamps += [date2num(dparser.parse(x.split('.')[1]), units='Seconds since 1970-01-01T00:00:00',
+                                         calendar='gregorian') for x in os.listdir(PATH_DATA_FORE_DATE[1])]
 
         aligned_fore_start = flt_time[0] + gb.LOOKAHEAD_SECONDS[1]
         aligned_fore_end = flt_time[-1] + gb.LOOKAHEAD_SECONDS[-1]
@@ -62,7 +54,7 @@ def process_flight_plan(var, PATH_DATA_SORTED, PATH_OUTPUT, lons, lats, USES_CUR
                 len(diff), file, flt_startdate.isoformat(), flt_enddate.isoformat()))
     if USES_CUR:
         PATH_DATA_CUR_DATE = [PATH_DATA_SORTED + flt_startdate.isoformat()[:10] + '/Current/',
-                                 PATH_DATA_SORTED + flt_enddate.isoformat()[:10] + '/Current/']
+                              PATH_DATA_SORTED + flt_enddate.isoformat()[:10] + '/Current/']
         if not (os.path.isdir(PATH_DATA_CUR_DATE[0]) and os.path.isdir(PATH_DATA_CUR_DATE[1])):
             logging.error(' EchoTop Current Data Does Not Cover ' + file + '(' + flt_startdate.isoformat() + ' - '
                           + flt_enddate.isoformat() + ')')
@@ -73,15 +65,42 @@ def process_flight_plan(var, PATH_DATA_SORTED, PATH_OUTPUT, lons, lats, USES_CUR
                                        calendar='gregorian') for x in os.listdir(PATH_DATA_CUR_DATE[0])]
             idx_cur_day_split = len(cur_timestamps)
             cur_timestamps +=[date2num(dparser.parse(x[-19:-3]), units='Seconds since 1970-01-01T00:00:00',
-                                   calendar='gregorian') for x in os.listdir(PATH_DATA_CUR_DATE[1])]
+                                       calendar='gregorian') for x in os.listdir(PATH_DATA_CUR_DATE[1])]
         elif var == 'VIL':
             cur_timestamps = [date2num(dparser.parse(x[-23:-3].replace('_','')), units='Seconds since 1970-01-01T00:00:00',
                                        calendar='gregorian') for x in os.listdir(PATH_DATA_CUR_DATE[0])]
             idx_cur_day_split = len(cur_timestamps)
             cur_timestamps +=[date2num(dparser.parse(x[-23:-3].replace('_','')), units='Seconds since 1970-01-01T00:00:00',
                                        calendar='gregorian') for x in os.listdir(PATH_DATA_CUR_DATE[1])]
+        elif var == 'HRRR':
+            cur_timestamps = [date2num(dparser.parse(x.split('.')[1]), units='Seconds since 1970-01-01T00:00:00',
+                                       calendar='gregorian') for x in os.listdir(PATH_DATA_CUR_DATE[0])]
+            idx_cur_day_split = len(cur_timestamps)
+            cur_timestamps +=[date2num(dparser.parse(x.split('.')[1]), units='Seconds since 1970-01-01T00:00:00',
+                                       calendar='gregorian') for x in os.listdir(PATH_DATA_CUR_DATE[1])]
+    return cur_timestamps, fore_timestamps, idx_fore_day_split, idx_cur_day_split
 
-        aligned_cur_start = flt_time[0] - (flt_time[0] % 150)
+
+def process_flight_plan(var, PATH_DATA_SORTED, PATH_OUTPUT, lons, lats, alts, alt_size, USES_CUR, USES_FORE, fore_start, PATH_LOG,
+                        file):
+
+    logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
+    # Load Flight Data and EchoTop Coordinates
+    flight_tr = np.loadtxt(file, delimiter=',')
+    flt_time = flight_tr[:, 0]
+    flt_lat = flight_tr[:, 1]
+    flt_lon = flight_tr[:, 2]
+
+    relevant_data = np.zeros((len(gb.LOOKAHEAD_SECONDS), len(lats), len(lons)), dtype=float)
+    idx_cur_data, idx_forecast_times = None, [-1] * (len(gb.LOOKAHEAD_SECONDS) - fore_start)
+
+    # Generate list of EchoTop Report Times
+    flt_startdate = num2date(flt_time[0], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
+    flt_enddate = num2date(flt_time[-1], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
+    cur_timestamps, fore_timestamps, idx_fore_day_split, idx_cur_day_split = get_relevant_timestamps(flt_startdate,
+                                         flt_enddate, flt_time, file, var, PATH_DATA_SORTED, USES_FORE, USES_CUR)
+
+        aligned_cur_start = flt_time[0]  - (flt_time[0] % 150)
         aligned_cur_end = flt_time[-1] - (flt_time[-1] % 150)
         exp_cur_timestamps = np.arange(aligned_cur_start, aligned_cur_end, 150)
         diff = set(exp_cur_timestamps) - set(cur_timestamps)
@@ -189,8 +208,8 @@ def process_flight_plan(var, PATH_DATA_SORTED, PATH_OUTPUT, lons, lats, USES_CUR
 
         # Collect and Append Single Cube
         # TODO: Find Weather data to test altitude dependency on
-        weather_cube_proj = np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
-        weather_cube_actual = np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
+        weather_cube_proj = np.zeros((2, alt_size, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
+        weather_cube_actual = np.zeros((2, alt_sizes, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
         weather_cube_et = np.zeros((gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
 
         # Vectorized Cube Data Extraction
@@ -280,14 +299,16 @@ def process_flight_plan(var, PATH_DATA_SORTED, PATH_OUTPUT, lons, lats, USES_CUR
 
 def main():
     # open sample Trajectory and Echotop data
-    products = {'et': 'ECHO_TOP','vil': 'VIL'}
-    prod = 'vil'
+    prod = 'hrrr'
     PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Flight_Plans/Sorted/'
     #PATH_ECHOTOP_NC =
     # PATH_ECHOTOP_FILE =
-    PATH_DATA = {'et': gb.PATH_PROJECT + '/Data/EchoTop/Sorted/', 'vil': gb.PATH_PROJECT + '/Data/VIL/Sorted/'}
+    products = {'et': ['ECHO_TOP'],'vil': ['VIL'], 'hrrr':['uwind','vwind','tmp']}
+    PATH_DATA = {'et': gb.PATH_PROJECT + '/Data/EchoTop/Sorted/', 'vil': gb.PATH_PROJECT + '/Data/VIL/Sorted/',
+                 'hrrr': gb.PATH_PROJECT + '/Data/HRRR/Sorted/'}
     PATH_SAMPLE_FILE = {'et': PATH_DATA['et'] + '2018-11-01/Current/ciws.EchoTop.20181101T000000Z.nc',
-            'vil': PATH_DATA['vil'] + '2019-01-10/Current/urn_fdc_ll.mit.edu_Dataset_VIL-0024E84DA303_2019-01-10T00_00_00Z.nc'}
+            'vil': PATH_DATA['vil'] + '2019-01-10/Current/urn_fdc_ll.mit.edu_Dataset_VIL-0024E84DA303_2019-01-10T00_00_00Z.nc',
+            'hrrr': PATH_DATA['hrrr'] + '2019-01-10/Current/hrrr.2019-01-10T000000Z.wrfprsf00.nc'}
 
     PATH_OUTPUT_CUBES = gb.PATH_PROJECT + '/Output/Weather Cubes/{}/'.format(products[prod])
     PATH_CUBES_LOG = gb.PATH_PROJECT + '/Output/Weather Cubes/{}_Cube_Gen.log'.format(products[prod])
@@ -304,6 +325,7 @@ def main():
     data = Dataset(PATH_SAMPLE_FILE[prod] + '', delimiter=',', format='NETCDF4')
     data_lon = data.variables['x0'][:]
     data_lat = data.variables['y0'][:]
+    data_alt = data.variables['z0'][:]
     data.close()
 
     USES_CURRENT = gb.LOOKAHEAD_SECONDS.__contains__(0.)
