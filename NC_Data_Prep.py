@@ -135,18 +135,18 @@ def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
     del time
     rootgrp_sorted.createVariable('lons', datatype=float, dimensions=('y0','x0'), zlib=True, complevel=6,
                                   least_significant_digit=5)
-    rootgrp_sorted.variables['x0'].units = 'degrees longitude'
-    rootgrp_sorted.variables['x0'][:] = x0[:]
+    rootgrp_sorted.variables['lons'].units = 'degrees longitude'
+    rootgrp_sorted.variables['lons'][:] = x0[:]
     del x0
     rootgrp_sorted.createVariable('lats', datatype=float, dimensions=('y0','x0'), zlib=True, complevel=6,
                                   least_significant_digit=5)
-    rootgrp_sorted.variables['y0'].units = 'degrees latitude'
-    rootgrp_sorted.variables['y0'][:] = y0[:]
+    rootgrp_sorted.variables['lats'].units = 'degrees latitude'
+    rootgrp_sorted.variables['lats'][:] = y0[:]
     del y0
     rootgrp_sorted.createVariable('alt', datatype=float, dimensions=('z0'), zlib=True, complevel=6,
                                   least_significant_digit=5)
-    rootgrp_sorted.variables['z0'].units = 'meters'
-    rootgrp_sorted.variables['z0'][:] = z0[:]
+    rootgrp_sorted.variables['alt'].units = 'meters'
+    rootgrp_sorted.variables['alt'][:] = z0[:]
     del z0
     rootgrp_sorted.createVariable(var, datatype=float, dimensions=('time', 'z0', 'y0', 'x0'), zlib=True,
                                   complevel=6, least_significant_digit=5, fill_value=fillval)
