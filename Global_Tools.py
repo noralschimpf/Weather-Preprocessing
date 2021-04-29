@@ -16,10 +16,10 @@ LOOKAHEAD_SECONDS = [0.]
 FORE_REFRESH_RATE = 3600
 
 # Path / Project Vars
-BLN_MULTIPROCESS = False
+BLN_MULTIPROCESS = True
 CUBE_SIZE = 20
 TARGET_SAMPLE_SIZE = -500
-PROCESS_MAX = 2
+PROCESS_MAX = 12
 PATH_PROJECT = os.path.abspath('.')
 FIGURE_FORMAT = 'png'
 
@@ -30,23 +30,6 @@ xMeterFrom, yMeterFrom should be 1-D, lat,long returned 1-D
 '''
 
 
-
-'''def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=6370997.):
-    lat, long = yMeterFrom, xMeterFrom
-    if isinstance(xMeterFrom, list):
-        for i in range(0, len(xMeterFrom)):
-            long[i] = long_0 + (xMeterFrom[i] / rEarth) * (180 / np.pi)
-    else:
-        long = long_0 + (xMeterFrom / rEarth) * (180 / np.pi)
-    if isinstance(yMeterFrom, list):
-        for j in range(0, len(yMeterFrom)):
-            lat[j] = lat_0 + (yMeterFrom[j] / rEarth) * (180 / np.pi)
-    else:
-        lat = lat_0 + (yMeterFrom / rEarth) * (180 / np.pi)
-
-    return lat, long'''
-
- #TODO: REVISIT
 def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=6370997.):
     lat_0, long_0 = lat_0*(np.pi/180), long_0*(np.pi/180)
     xMeterFrom,yMeterFrom = map(np.array, np.meshgrid(xMeterFrom,yMeterFrom))
