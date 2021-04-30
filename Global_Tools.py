@@ -4,6 +4,7 @@ import os, re, zipfile
 import pygrib
 pygrib.set_definitions_path('C:\\Users\\User\\anaconda3\\envs\\pygrib\\Library\\share\\eccodes\\definitions')
 #from line_profiler import LineProfiler
+from numba import jit
 
 # Global Constants, specc'd by SHERLOC
 LAT_ORIGIN = 38.
@@ -16,7 +17,7 @@ LOOKAHEAD_SECONDS = [0.]
 FORE_REFRESH_RATE = 3600
 
 # Path / Project Vars
-BLN_MULTIPROCESS = True
+BLN_MULTIPROCESS = False
 CUBE_SIZE = 20
 TARGET_SAMPLE_SIZE = -500
 PROCESS_MAX = 12
@@ -29,8 +30,7 @@ Convert relative position to latitude/longitude coordinates for Basemap
 xMeterFrom, yMeterFrom should be 1-D, lat,long returned 1-D
 '''
 
-
-def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=6370997.):
+def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=R_EARTH):
     lat_0, long_0 = lat_0*(np.pi/180), long_0*(np.pi/180)
     xMeterFrom,yMeterFrom = map(np.array, np.meshgrid(xMeterFrom,yMeterFrom))
     magnitudes, headings = np.sqrt(xMeterFrom**2 + yMeterFrom**2), np.arctan2(xMeterFrom,yMeterFrom)
@@ -39,7 +39,6 @@ def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=637099
     #latnew_rad, lat0_rad = lat_new * (np.pi/180), lat_0 * (np.pi/180)
 
     d_psi = np.log(np.tan(np.pi/4 + lat_new/2)/np.tan(np.pi/4 + lat_0/2))
-
     q = np.array(d_psi)
     #q[q<=10e-12] = np.cos(q[q<=10e-12])
     #q[q > 10e-12] = (lat_new[q>10e-12] - lat_0)/q[q > 10e-12]
@@ -49,12 +48,23 @@ def rel_to_latlong(xMeterFrom, yMeterFrom, lat_0=38., long_0=-98., rEarth=637099
     lat_new = lat_new*(180/np.pi); long_new = long_new*(180/np.pi);
     return lat_new, long_new
 
+@jit(nopython=True)
+def latlon_unitsteps(lat, lon, heading_degrees, dist_m=1500, rEarth = R_EARTH):
+    dist = dist_m/rEarth
+    heading = np.radians(heading_degrees)
+    lat_step = dist*np.cos(heading)
+    lat_new = lat + lat_step
+    d_psi = np.log(np.tan(np.pi/4 + lat_new/2)/np.tan(np.pi/4 + lat/2))
+    q = np.array(d_psi)
+    q = (lat_new - lat)/q
+    lon_step = dist*np.sin(heading)/q
+    return np.degrees(np.abs(lat_step)), np.degrees(np.abs(lon_step))
 '''
 Project heading based on lat/lon pairs a->b
 alg reference: https://www.movable-type.co.uk/scripts/latlong.html
 '''
 
-
+@jit(nopython=True)
 def heading_a_to_b(a_lon, a_lat, b_lon, b_lat, spherical=True):
     if spherical:
         x = (math.cos(b_lat) * math.sin(a_lat)) - (math.sin(b_lat) * math.cos(a_lat) * math.cos(a_lon - b_lon))
@@ -75,11 +85,13 @@ return unit: kilometers
 equation ref: https://www.movable-type.co.uk/scripts/latlong.html
 '''
 
-
-def haversine(lat2, lat1, delta_lons, rEarth):
-    lat2_rad, lat1_rad, delta_lons_rad = np.radians([lat2, lat1, delta_lons])
-    a = math.sin((lat2_rad - lat1_rad) / 2) ** 2 + (math.cos(lat1_rad) * math.cos(lat2_rad) * (math.sin(delta_lons_rad / 2) ** 2))
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+@jit(nopython=True)
+def haversine(lat2: float, lat1: np.array, delta_lons: np.array, rEarth: int = R_EARTH):
+    lat2_rad = np.radians(lat2)
+    lat1_rad = np.radians(lat1)
+    delta_lons_rad = np.radians(delta_lons)
+    a = np.sin((lat2_rad - lat1_rad) / 2) ** 2 + (np.cos(lat1_rad) * np.cos(lat2_rad) * (np.sin(delta_lons_rad / 2) ** 2))
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
     return rEarth * c / 1000
 
 
