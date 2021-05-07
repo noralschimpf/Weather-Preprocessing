@@ -59,26 +59,6 @@ def get_axes(lats, lons, flt_lat, flt_lon, heading, dist_m):
     heading_ortho = (heading + 90) % 360
     theta = math.radians(heading - 90)
     theta_ortho = math.radians(heading_ortho - 90)
-
-    # find track-point in ET data and calculate point-steps
-    data_lon_idx = np.where(np.abs(lons - flt_lon).min() == np.abs(lons - flt_lon))
-    data_lat_idx = np.where(np.abs(lats - flt_lat).min() == np.abs(lats - flt_lat))
-
-    # Select nearest-available point to determine step-sizes
-    #data_lon, data_lat = lons[data_lon_idx][0], lats[data_lat_idx][0]
-    '''data_lon_neighbor, data_lat_neighbor = None, None
-    if data_lon_idx == len(lons) - 1:
-        data_lon_neighbor = data_lon_idx - 1
-    else:
-        data_lon_neighbor = data_lon_idx + 1
-    if data_lat_idx == len(lats) - 1:
-        data_lat_neighbor = data_lat_idx - 1
-    else:
-        data_lat_neighbor = data_lat_idx + 1
-    data_delta_lon, data_delta_lat = np.abs(data_lon - lons[data_lon_neighbor]), np.abs(data_lat - lats[data_lat_neighbor])'''
-
-    #diff_lon, diff_lat = np.array(np.abs(lons - flt_lon)), np.array(np.abs(lats - flt_lat))
-    #data_delta_lon, data_delta_lat = diff_lon[np.nonzero(diff_lon)].min(), diff_lat[np.nonzero(diff_lat)].min()
     data_delta_lat, data_delta_lon = gb.latlon_unitsteps(flt_lat,flt_lon,heading,dist_m=dist_m)
 
     unitstep_x = data_delta_lon * np.cos(theta)
