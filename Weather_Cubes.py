@@ -65,7 +65,7 @@ def get_axes(lats, lons, flt_lat, flt_lon, heading, dist_m):
     data_lat_idx = np.where(np.abs(lats - flt_lat).min() == np.abs(lats - flt_lat))
 
     # Select nearest-available point to determine step-sizes
-    data_lon, data_lat = lons[data_lon_idx][0], lats[data_lat_idx][0]
+    #data_lon, data_lat = lons[data_lon_idx][0], lats[data_lat_idx][0]
     '''data_lon_neighbor, data_lat_neighbor = None, None
     if data_lon_idx == len(lons) - 1:
         data_lon_neighbor = data_lon_idx - 1
@@ -77,7 +77,7 @@ def get_axes(lats, lons, flt_lat, flt_lon, heading, dist_m):
         data_lat_neighbor = data_lat_idx + 1
     data_delta_lon, data_delta_lat = np.abs(data_lon - lons[data_lon_neighbor]), np.abs(data_lat - lats[data_lat_neighbor])'''
 
-    diff_lon, diff_lat = np.array(np.abs(lons - flt_lon)), np.array(np.abs(lats - flt_lat))
+    #diff_lon, diff_lat = np.array(np.abs(lons - flt_lon)), np.array(np.abs(lats - flt_lat))
     #data_delta_lon, data_delta_lat = diff_lon[np.nonzero(diff_lon)].min(), diff_lat[np.nonzero(diff_lat)].min()
     data_delta_lat, data_delta_lon = gb.latlon_unitsteps(flt_lat,flt_lon,heading,dist_m=dist_m)
 
@@ -252,7 +252,7 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
                            prd['lats'],prd['lons'], len(gb.LOOKAHEAD_SECONDS), len(prd['products']),prd['cube height'])
 
         # Print the max Error between cube points
-        if i % 100 == 0:
+        if i % 30 == 0:
             err = np.abs(weather_cube_actual - weather_cube_proj)
             err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
             maxerr = err_dist.flatten()[err_dist.argmax()]
