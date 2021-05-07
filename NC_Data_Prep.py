@@ -71,12 +71,13 @@ def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
     # time = echotop[:], time[:]
 
     # Save Data as Sorted netCDF4
+    newfilename = '{}.{}Z.nc'.format(var, date.isoformat().replace(':',''))
     str_current_date = date.isoformat()[:10]
     if not os.path.isdir(path_et + '\\Sorted\\' + str_current_date):
         os.mkdir(path_et + '\\Sorted\\' + str_current_date)
     if not os.path.isdir(path_et + '\\Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST):
         os.mkdir(path_et + '\\Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST)
-    str_sorted_file = path_et + 'Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST + '\\' + os.path.split(file)[1]
+    str_sorted_file = path_et + 'Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST + '\\' + newfilename
 
     '''
         Map EchoTop x,y to Lambert Conformal Projection

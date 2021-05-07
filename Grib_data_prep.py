@@ -38,6 +38,7 @@ def process_file(logfile, path_sorted, date, file):
     grb_vwind = grfile.select(name='V component of wind')
     grbshape = grfile[1].values.shape
     lats, lons = grb_tmp[0]['latitudes'].reshape(grbshape[0],grbshape[1]), grb_tmp[0]['longitudes'].reshape(grbshape[0], grbshape[1])
+    lons[lons > 180] = lons[lons > 180] - 360
     grb_tmp = grb_to_grid(grb_tmp)
     grb_uwind = grb_to_grid(grb_uwind)
     grb_vwind = grb_to_grid(grb_vwind)
