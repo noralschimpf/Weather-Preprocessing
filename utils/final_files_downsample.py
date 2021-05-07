@@ -69,14 +69,15 @@ def downsample_file(decimation_factor: int, abspath: str):
 
 
 def main():
-    rootpath = 'H:\\TorchDir Archive\\14 Days Unified 1 Second\\'
+    #rootpath = 'H:\\TorchDir Archive\\14 Days Unified 1 Second\\'
+    rootpath = 'D:/NathanSchimpf/PyCharmProjects/Weather-Preprocessing/Data'
     dec_rate = 60
     # rootpath = 'F:/Aircraft-Data/Torchdir/'
     os.chdir(rootpath)
     func_process = partial(downsample_file, dec_rate)
 
-    fp_dates = [x for x in os.listdir('IFF_Flight_Plans') if os.path.isdir('IFF_Flight_Plans/{}'.format(x))]
-    os.chdir('IFF_Flight_Plans')
+    fp_dates = [x for x in os.listdir('IFF_Flight_Plans/Sorted') if os.path.isdir('IFF_Flight_Plans/Sorted/{}'.format(x))]
+    os.chdir('IFF_Flight_Plans/Sorted')
     for date in fp_dates:
         print('Flight Plans: {}'.format(date))
         os.chdir(date)
@@ -91,7 +92,7 @@ def main():
     os.chdir('../')
 
 
-    ft_dates = [x for x in os.listdir('IFF_Track_Points') if os.path.isdir('IFF_Track_Points/{}'.format(x))]
+    '''ft_dates = [x for x in os.listdir('IFF_Track_Points') if os.path.isdir('IFF_Track_Points/{}'.format(x))]
     os.chdir('IFF_Track_Points')
     for date in ft_dates:
         print('Flight Tracks: {}'.format(date))
@@ -116,7 +117,7 @@ def main():
         for file in files:
             func_process(file)
         os.chdir('..')
-    os.chdir('..')
+    os.chdir('..')'''
 
 if __name__ == '__main__':
     main()

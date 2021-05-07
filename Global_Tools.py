@@ -4,7 +4,6 @@ import math
 import os, re, zipfile
 import pygrib
 pygrib.set_definitions_path('C:\\Users\\User\\anaconda3\\envs\\pygrib\\Library\\share\\eccodes\\definitions')
-#from line_profiler import LineProfiler
 import utm
 from numba import jit
 
