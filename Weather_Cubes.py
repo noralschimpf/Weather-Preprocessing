@@ -252,15 +252,12 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
                            prd['lats'],prd['lons'], len(gb.LOOKAHEAD_SECONDS), len(prd['products']),prd['cube height'])
 
         # Print the max Error between cube points
-        #if i % 100 == 0:
-        err = np.abs(weather_cube_actual - weather_cube_proj)
-        err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
-        maxerr = err_dist.flatten()[err_dist.argmax()]
-        print("{}\tMax Distance Err:\t".format(datetime.datetime.now()), "{:10.4f}\t".format(maxerr), "\t", str(i + 1),
-              ' / ', len(flight_tr[:, 1] - 1), '\t', file.split('/')[-1])
-
-        if i == len(flt_time):
-            exit(13)
+        if i % 100 == 0:
+            err = np.abs(weather_cube_actual - weather_cube_proj)
+            err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
+            maxerr = err_dist.flatten()[err_dist.argmax()]
+            print("{}\tMax Distance Err:\t".format(datetime.datetime.now()), "{:10.4f}\t".format(maxerr), "\t", str(i + 1),
+                  ' / ', len(flight_tr[:, 1] - 1), '\t', file.split('/')[-1])
 
         # Append current cube to list of data
         weather_cubes_lat[i] = weather_cube_actual[1]
