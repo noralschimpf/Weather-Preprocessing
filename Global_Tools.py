@@ -154,7 +154,7 @@ def heading_a_to_b(a_lon, a_lat, b_lon, b_lat, spherical=True):
     return heading
 
 
-@jit(nopython=True, parallel=True, nogil=True)
+@jit(nopython=True)
 def haversine(lat2: float, lat1: np.array, delta_lons: np.array, rEarth: int = R_EARTH):
     '''
     Haversine formula calculates the as-the-crow-flies distance between two coordinates
@@ -168,13 +168,16 @@ def haversine(lat2: float, lat1: np.array, delta_lons: np.array, rEarth: int = R
     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
     return rEarth * c / 1000
 
-
+@jit(nopython=True)
 def utm_dist(target_N, target_E, nda_N, nda_E):
     '''
     Calculates the distance between mercator points, where nda_N and nda_E can be broadcasted as arrays
     distance is simplified as pythagorean
-    :return:
-    dists: ndarray of mercator distances to reach (target_N, target_E)
+    :param target_N: a single (desired) Northing point
+    :param target_E: a single (desired) Easting point
+    :param nda_N: N-Dimensional Array of possible Northings
+    :param nda_E:   N-Dimensional Array of possible Eastings
+    :return dists: ndarray of mercator distances to reach (target_N, target_E)
     '''
     dists = np.sqrt(np.square(nda_N - target_N) + np.square(nda_E - target_E))
     return dists
@@ -300,16 +303,3 @@ def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, save_filename
     np.savetxt(PATH_START_DATE, data_to_save, delimiter=',', fmt='%s')
     if bool_delete_original:
         os.remove(orig_filename)
-
-
-'''# EXCLUDED LINEPROFILER
-# Decorate (@profile) to generate a function profile
-def profile(fnc):
-    def inner(*args, **kwargs):
-        lp = LineProfiler()
-        lp_wrapper = lp(fnc)
-        retval = lp_wrapper(*args, **kwargs)
-        lp.print_stats()
-        return retval
-
-    return inner'''

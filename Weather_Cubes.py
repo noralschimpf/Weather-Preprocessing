@@ -9,13 +9,6 @@ from dateutil import parser as dparser
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from numba import jit
-#from Global_Tools import profile
-
-'''
-EXCLUDE PROFILER
-from Global_Tools import profile
-'''
-
 
 def get_relevant_timestamps(flt_startdate, flt_enddate, flt_time, file, var, PATH_DATA_SORTED, USES_FORE, USES_CUR):
     fore_timestamps = cur_timestamps = []
@@ -61,7 +54,7 @@ def get_relevant_timestamps(flt_startdate, flt_enddate, flt_time, file, var, PAT
 
     return cur_timestamps, fore_timestamps, idx_fore_day_split, idx_cur_day_split, PATH_DATA_CUR_DATE, PATH_DATA_FORE_DATE
 
-#@jit()
+@jit(nopython=True)
 def get_axes(lats, lons, flt_lat, flt_lon, heading, dist_m):
     heading_ortho = (heading + 90) % 360
     theta = math.radians(heading - 90)
@@ -94,46 +87,6 @@ def get_axes(lats, lons, flt_lat, flt_lon, heading, dist_m):
     unitstep_ortho_y = data_delta_lat * np.sin(theta_ortho)
     return unitstep_x, unitstep_y, unitstep_ortho_x, unitstep_ortho_y
 
-@jit(nopython=True)
-def gridded_crop(lats, lons, relevant_data, lat_center, lon_center, data_dims, min_degree = 2.):
-    lats, lons, relevant_data = lats.flatten(), lons.flatten(), relevant_data.reshape(data_dims[0], data_dims[1],data_dims[2],-1)
-
-    idx_min_lats = np.where(np.abs(lats - lat_center) < min_degree)[0]
-    idx_min_lons = np.where(np.abs(lons - lon_center) < min_degree)[0]
-
-    idx_common_idxs = np.array([x for x in idx_min_lats if x in idx_min_lons])
-
-    lats_cropped = lats[idx_common_idxs]
-    lons_cropped = lons[idx_common_idxs]
-    data_cropped = relevant_data[:,:,:,idx_common_idxs]
-    #lats_cropped = np.pa
-
-    return lats_cropped, lons_cropped, data_cropped
-
-
-@jit(nopython=True, nogil=True)
-def fill_cube(weather_cube_proj: np.array, relevant_data: np.array, lats: np.array, lons: np.array,
-              len_lookahead: np.int32, len_prds: np.int32, len_alts: np.int32):
-    weather_cube_actual = np.zeros((int(2), gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=np.float64)
-    #Cube Dims (lookahead x products x height x lat x lon) (t,v,z,lat,lon)
-    weather_cube_data = np.zeros((len_lookahead,len_prds,len_alts, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=np.float64)
-
-    for idx_ in range(0, gb.CUBE_SIZE):
-        for idx_ortho in range(0, gb.CUBE_SIZE):
-            haversine_matrix = gb.haversine(weather_cube_proj[1][idx_][idx_ortho], lats, lons - weather_cube_proj[0][idx_][idx_ortho])
-            idx_point = np.where(np.abs(haversine_matrix).min() == np.abs(haversine_matrix))
-            idx_point = (idx_point[0][0],idx_point[1][0])
-            #idx_point = idx_point[0][0]
-            weather_cube_actual[0][idx_][idx_ortho] = lons[idx_point]
-            weather_cube_actual[1][idx_][idx_ortho] = lats[idx_point]
-
-            #collect all t, v, alt for the lat/lon point
-            weather_cube_data[:,:,:,idx_,idx_ortho] = relevant_data[:,:,:,idx_point[0],idx_point[1]]
-            #weather_cube_data[:,:,:,idx_,idx_ortho] = relevant_data[:,:,:,idx_point]
-            '''for t in range(0, len(gb.LOOKAHEAD_SECONDS)):
-                for v in range(0,len(prd['products'])):
-                    weather_cube_data[t,v,:,idx_,idx_ortho] = relevant_data[t,v,:,idx_point[0],idx_point[1]]'''
-    return weather_cube_actual, weather_cube_data
 
 def fill_cube_utm(weather_cube_proj: np.array, relevant_data: np.array, UTM_dict: dict, UTM_traceback_dict: dict,
                   lats: np.array, lons: np.array, len_lookahead: np.int32, len_prds: np.int32, len_alts: np.int32):
@@ -279,7 +232,7 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
         weather_cube_proj = np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
         weather_cube_actual = np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
         weather_cube_alt = np.zeros((prd['cube height']), dtype=float)
-        #Cube Dims (lookahead x products x height x lat x lon) (t,v,z,lat,lon)
+        # Cube Dims (lookahead x products x height x lat x lon) (t,v,z,lat,lon)
         weather_cube_data = np.zeros((len(gb.LOOKAHEAD_SECONDS),len(prd['products']),prd['cube height'],
                                       gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
 
@@ -295,25 +248,8 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
 
         weather_cube_alt = prd['alts'][idx_alt-1:idx_alt+2]
 
-        '''
-        lats_cropped, lons_cropped, data_cropped = gridded_crop(prd['lats'], prd['lons'], relevant_data,
-                weather_cube_proj[1][int(gb.CUBE_SIZE/2)][int(gb.CUBE_SIZE/2)], weather_cube_proj[0][int(gb.CUBE_SIZE/2)][int(gb.CUBE_SIZE/2)],
-                np.array([len(gb.LOOKAHEAD_SECONDS), len(prd['products']), prd['cube height']]))
-
-        squaredim = int(np.ceil(np.sqrt(len(lats_cropped))))
-        lats_cropped = np.resize(lats_cropped, (squaredim,squaredim))
-        lons_cropped = np.resize(lons_cropped, (squaredim,squaredim))
-        data_cropped = np.resize(data_cropped, (data_cropped.shape[0], data_cropped.shape[1], data_cropped.shape[2], squaredim,squaredim))
-        '''
-
         weather_cube_actual, weather_cube_data = fill_cube_utm(weather_cube_proj, relevant_data, prd['UTM'], prd['UTM-latlon idxs'],
                            prd['lats'],prd['lons'], len(gb.LOOKAHEAD_SECONDS), len(prd['products']),prd['cube height'])
-
-        #weather_cube_actual, weather_cube_data = fill_cube(weather_cube_proj, relevant_data, prd['lats'], prd['lons'],
-        #                                                   len(gb.LOOKAHEAD_SECONDS), len(prd['products']),prd['cube height'])
-
-        #weather_cube_actual, weather_cube_data = fill_cube(weather_cube_proj, data_cropped, lats_cropped, lons_cropped,
-        #                                                   len(gb.LOOKAHEAD_SECONDS), len(prd['products']),prd['cube height'])
 
         # Print the max Error between cube points
         #if i % 100 == 0:
