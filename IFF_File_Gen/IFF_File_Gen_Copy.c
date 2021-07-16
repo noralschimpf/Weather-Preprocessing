@@ -113,17 +113,17 @@ int main() {
 
 	// Set the source file path
 //	const char *source_path = "C:\\Users\\eknobloc\\Desktop\\Autonomous Spectrum Study\\Data Engineering\\IFF Flight Track\\IFF_Source.csv";
-	const char *source_path = "F:\\Aircraft-Data\\IFF Data\\2019-01-10 to 2019-01-24\\IFF_USA_20190115_050007_86392.csv";
+	const char *source_path = "F:\\Aircraft-Data\\IFF Data\\2019-01-10 to 2019-01-24\\IFF_USA_20190110_050006_86392.csv";
 
 	// Set the status file path; this txt file provides a summary of what was found in the search. It includes the record number, origin airport, and destination airport
 //	const char *status_path = "C:\\Users\\eknobloc\\Desktop\\Autonomous Spectrum Study\\Data Engineering\\IFF Flight Track\\IFF_Track_Summary.txt";
 	const char *status_path = "C:\\Users\\natha\\Desktop\\IFF_Data\\IFF_Track_Summary.txt";
 	// Set the output file path headers for the txt file and KML file; the file name will be appended with the origin airport, destination airport and aircraft ID
 //	char dest_path_header[] = "C:\\Users\\eknobloc\\Desktop\\Autonomous Spectrum Study\\Data Engineering\\IFF Flight Track\\Flight_Track_";
-	char dest_path_header[] = "C:\\Users\\natha\\Desktop\\IFF_Data\\KJFK_KLAX\\Flight_Track\\2019-01-15\\";
+	char dest_path_header[] = "C:\\Users\\natha\\PycharmProjects\\WeatherPreProcessing\\Data\\IFF_Flight_Plans\\KORD_KJFK_20190110\\";
 	// Set the desired origin airport and desired destination airport; always include the terminating '\0' at the end of the string
-	char desired_orig[] = "KJFK\0";
-	char desired_dest[] = "KLAX\0";
+	char desired_orig[] = "KORD\0";
+	char desired_dest[] = "KJFK\0";
 
 
 	// Open source IFF source file; terminate if file error
