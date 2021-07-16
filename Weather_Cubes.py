@@ -304,7 +304,7 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
     cubes_rootgrp.variables['longitude'][:] = weather_cubes_lon
     for p in range(len(prd['products'])):
         cubes_rootgrp.variables[prd['products'][p]][:] = weather_cubes_data[:,:,p,:,:,:]
-
+    
     cubes_rootgrp.close()
     print('COMPLETED:\t', PATH_NC_FILENAME)
     return 0
