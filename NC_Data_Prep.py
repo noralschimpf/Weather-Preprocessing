@@ -129,31 +129,32 @@ def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
     rootgrp_sorted.createDimension('z0', size=1)
 
     # Add Variables: t, X\\YPoints, lat\\lon, echotop
-    rootgrp_sorted.createVariable('time', datatype=float, dimensions=('time'), zlib=True, complevel=6)
+    rootgrp_sorted.createVariable('time', datatype=float, dimensions=('time'), zlib=True, complevel=gb.CIWS_COMPLEVEL)
     rootgrp_sorted.variables['time'].units = time.units
     rootgrp_sorted.variables['time'].calendar = time.calendar
     rootgrp_sorted.variables['time'] = time
     del time
-    rootgrp_sorted.createVariable('lons', datatype=float, dimensions=('y0','x0'), zlib=True, complevel=6,
+    rootgrp_sorted.createVariable('lons', datatype=float, dimensions=('y0','x0'), zlib=True, complevel=gb.CIWS_COMPLEVEL,
                                   least_significant_digit=5)
     rootgrp_sorted.variables['lons'].units = 'degrees longitude'
     rootgrp_sorted.variables['lons'][:] = x0[:]
     del x0
-    rootgrp_sorted.createVariable('lats', datatype=float, dimensions=('y0','x0'), zlib=True, complevel=6,
+    rootgrp_sorted.createVariable('lats', datatype=float, dimensions=('y0','x0'), zlib=True, complevel=gb.CIWS_COMPLEVEL,
                                   least_significant_digit=5)
     rootgrp_sorted.variables['lats'].units = 'degrees latitude'
     rootgrp_sorted.variables['lats'][:] = y0[:]
     del y0
-    rootgrp_sorted.createVariable('alt', datatype=float, dimensions=('z0'), zlib=True, complevel=6,
+    rootgrp_sorted.createVariable('alt', datatype=float, dimensions=('z0'), zlib=True, complevel=gb.CIWS_COMPLEVEL,
                                   least_significant_digit=5)
     rootgrp_sorted.variables['alt'].units = 'meters'
     rootgrp_sorted.variables['alt'][:] = z0[:]
     del z0
-    rootgrp_sorted.createVariable(var, datatype=float, dimensions=('time', 'z0', 'y0', 'x0'), zlib=True,
-                                  complevel=6, least_significant_digit=5, fill_value=fillval)
+    rootgrp_sorted.createVariable(var, datatype='int8', dimensions=('time', 'z0', 'y0', 'x0'), zlib=True,
+                                  complevel=gb.CIWS_COMPLEVEL, least_significant_digit=0, fill_value=fillval)
     rootgrp_sorted.variables[var].units = rootgrp_orig.variables[var].units
     rootgrp_sorted.variables[var].add_offset = rootgrp_orig.variables[var].add_offset
     rootgrp_sorted.variables[var].scale_factor = rootgrp_orig.variables[var].scale_factor
+    rootgrp_sorted.variables[var].valid_range = rootgrp_orig.variables[var].valid_range
     rootgrp_sorted.variables[var][:] = rootgrp_orig.variables[var][:SIZE_TIME]
     # del echotop
     rootgrp_orig.close()

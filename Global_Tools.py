@@ -3,7 +3,8 @@ import pandas as pd
 import math
 import os, re, zipfile
 import pygrib
-pygrib.set_definitions_path('C:\\Users\\User\\anaconda3\\envs\\pygrib\\Library\\share\\eccodes\\definitions')
+#pygrib.set_definitions_path('C:\\Users\\User\\anaconda3\\envs\\pygrib\\Library\\share\\eccodes\\definitions')
+pygrib.set_definitions_path('C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessing\\Library\\share\\eccodes\\definitions')
 import utm
 from numba import jit
 
@@ -17,10 +18,11 @@ LOOKAHEAD_SECONDS = [0.]
 FORE_REFRESH_RATE = 3600
 
 # Path / Project Vars
-BLN_MULTIPROCESS = True
+BLN_MULTIPROCESS = False
 CUBE_SIZE = 20
+CIWS_COMPLEVEL = 9
 TARGET_SAMPLE_SIZE = -500
-PROCESS_MAX = 8
+PROCESS_MAX = 6
 PATH_PROJECT = os.path.abspath('.')
 FIGURE_FORMAT = 'png'
 

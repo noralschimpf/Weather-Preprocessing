@@ -70,18 +70,20 @@ def downsample_file(decimation_factor: int, abspath: str):
 
 def main():
     #rootpath = 'H:\\TorchDir Archive\\14 Days Unified 1 Second\\'
-    rootpath = 'D:/NathanSchimpf/PyCharmProjects/Weather-Preprocessing/Data'
+    #rootpath = 'D:/NathanSchimpf/PyCharmProjects/Weather-Preprocessing/Data'
+    rootpath = 'C:\\Users\\natha\\PycharmProjects\\WeatherPreProcessing\\Data'
     dec_rate = 60
     # rootpath = 'F:/Aircraft-Data/Torchdir/'
     os.chdir(rootpath)
     func_process = partial(downsample_file, dec_rate)
 
-    fp_dates = [x for x in os.listdir('IFF_Flight_Plans/Sorted') if os.path.isdir('IFF_Flight_Plans/Sorted/{}'.format(x))]
+
+    fp_dates = [x for x in os.listdir('IFF_Flight_Plans/Sorted') if not 'tmp' in x and os.path.isdir('IFF_Flight_Plans/Sorted/{}'.format(x))]
     os.chdir('IFF_Flight_Plans/Sorted')
     for date in fp_dates:
         print('Flight Plans: {}'.format(date))
         os.chdir(date)
-        files = [os.path.abspath(x) for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('Flight_Plan')]
+        files = [os.path.abspath(x) for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('_fp.txt')]
         if gb.BLN_MULTIPROCESS:
             with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
                 executor.map(func_process, files)
@@ -89,11 +91,11 @@ def main():
             for file in files:
                 func_process(file)
         os.chdir('..')
-    os.chdir('../')
+    os.chdir('../../')
 
 
-    '''ft_dates = [x for x in os.listdir('IFF_Track_Points') if os.path.isdir('IFF_Track_Points/{}'.format(x))]
-    os.chdir('IFF_Track_Points')
+    os.chdir('IFF_Track_Points/Sorted')
+    ft_dates = [x for x in os.listdir() if not 'tmp' in x and os.path.isdir(x)]
     for date in ft_dates:
         print('Flight Tracks: {}'.format(date))
         os.chdir(date)
@@ -105,8 +107,8 @@ def main():
             for file in files:
                 func_process(file)
         os.chdir('..')
-    os.chdir('../')
-
+    os.chdir('../../')
+    
     wc_dates = [x for x in os.listdir('Weather Cubes') if os.path.isdir('Weather Cubes/{}'.format(x))]
     os.chdir('Weather Cubes')
     for date in wc_dates:
@@ -117,7 +119,8 @@ def main():
         for file in files:
             func_process(file)
         os.chdir('..')
-    os.chdir('..')'''
+    os.chdir('..')
+
 
 if __name__ == '__main__':
     main()

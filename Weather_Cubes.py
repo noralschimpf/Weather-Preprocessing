@@ -113,8 +113,11 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
     flt_startdate = num2date(flt_time[0], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
     flt_enddate = num2date(flt_time[-1], units='seconds since 1970-01-01T00:00:00', calendar='gregorian')
     # Generate list of EchoTop Report Times
-    cur_timestamps, fore_timestamps, idx_fore_day_split, idx_cur_day_split, PATH_DATA_CUR_DATE, PATH_DATA_FORE_DATE = get_relevant_timestamps(flt_startdate,
-                                                                                                                                              flt_enddate, flt_time, file, prd['products'], prd['sorted path'], USES_FORE, USES_CUR)
+    try:
+        cur_timestamps, fore_timestamps, idx_fore_day_split, idx_cur_day_split, PATH_DATA_CUR_DATE, PATH_DATA_FORE_DATE \
+            = get_relevant_timestamps(flt_startdate, flt_enddate, flt_time, file, prd['products'], prd['sorted path'], USES_FORE, USES_CUR)
+    except TypeError:
+        return -1
 
     aligned_cur_start = flt_time[0]  - (flt_time[0] % prd['refresh rate'])
     aligned_cur_end = flt_time[-1] - (flt_time[-1] % prd['refresh rate'])
@@ -303,6 +306,7 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
         cubes_rootgrp.variables[prd['products'][p]][:] = weather_cubes_data[:,:,p,:,:,:]
 
     cubes_rootgrp.close()
+    print('COMPLETED:\t', PATH_NC_FILENAME)
     return 0
 
 
@@ -310,46 +314,46 @@ def main():
     # open sample Trajectory and Echotop data
     PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Flight_Plans/Interpolated/'
 
-    et_sample = Dataset('Data/EchoTop/Sorted/2019-01-10/Current/EchoTop.20190110T000000Z.nc','r', format='NETCDF4')
-    vil_sample = Dataset('Data/VIL/Sorted/2019-01-10/Current/VIL.2019-01-10T000000Z.nc','r',format='NETCDF4')
-    hrrr_sample = Dataset('Data/HRRR/Sorted/2019-01-10/Current/hrrr.2019-01-10T000000Z.wrfprsf00.nc')
+    et_sample = Dataset('Data/EchoTop/Sorted/2019-01-10/Current/ECHO_TOP.2019-01-10T000000Z.nc','r', format='NETCDF4')
+    #vil_sample = Dataset('Data/VIL/Sorted/2019-01-10/Current/VIL.2019-01-10T000000Z.nc','r',format='NETCDF4')
+    #hrrr_sample = Dataset('Data/HRRR/Sorted/2019-01-10/Current/hrrr.2019-01-10T000000Z.wrfprsf00.nc')
     ciws_lats, ciws_lons = np.array(et_sample['lats'][:]), np.array(et_sample['lons'][:])
     ciws_utmdict, ciws_traceback, df_ciws_verif = gb.longrange_latlon_to_utm(ciws_lats, ciws_lons)
     df_ciws_verif.to_csv(gb.PATH_PROJECT + '/Output/Weather Cubes/CIWS_UTM.csv')
-    hrrr_lats, hrrr_lons = np.array(hrrr_sample['lats'][:]), np.array(hrrr_sample['lons'][:])
-    hrrr_utmdict, hrrr_traceback, df_hrrr_verif = gb.longrange_latlon_to_utm(hrrr_lats, hrrr_lons)
-    df_hrrr_verif.to_csv(gb.PATH_PROJECT + '/Output/Weather Cubes/HRRR_UTM.csv')
+    #hrrr_lats, hrrr_lons = np.array(hrrr_sample['lats'][:]), np.array(hrrr_sample['lons'][:])
+    #hrrr_utmdict, hrrr_traceback, df_hrrr_verif = gb.longrange_latlon_to_utm(hrrr_lats, hrrr_lons)
+    #df_hrrr_verif.to_csv(gb.PATH_PROJECT + '/Output/Weather Cubes/HRRR_UTM.csv')
 
     prd_et = {'products': ['ECHO_TOP'], 'cube height': 1, 'lats': ciws_lats, 'lons': ciws_lons,
               'UTM': ciws_utmdict, 'UTM-latlon idxs': ciws_traceback,
               'alts': np.array(et_sample['alt'][:]), 'sorted path': gb.PATH_PROJECT + '/Data/EchoTop/Sorted/',
-              'output path': gb.PATH_PROJECT + '/Output/Weather Cubes/ECHO_TOP/', 'refresh rate': 150,'spatial res': 1850,
+              'output path': 'F:\\Aircraft-Data\\Weather Cubes\\ECHO_TOP\\', 'refresh rate': 150,'spatial res': 1850,
               'log path': gb.PATH_PROJECT + '/Output/Weather Cubes/ECHO_TOP_Cube_Gen.log'}
+# gb.PATH_PROJECT + '/Output/Weather Cubes/ECHO_TOP/'
+    # prd_vil = {'products': ['VIL'], 'cube height': 1, 'lats': ciws_lats, 'lons': ciws_lons,
+    #            'UTM': ciws_utmdict, 'UTM-latlon idxs': ciws_traceback,
+    #            'alts': np.array(vil_sample['alt'][:]), 'sorted path': gb.PATH_PROJECT + '/Data/VIL/Sorted/',
+    #            'output path': gb.PATH_PROJECT + '/Output/Weather Cubes/VIL/', 'refresh rate': 150, 'spatial res': 1850,
+    #            'log path': gb.PATH_PROJECT + '/Output/Weather Cubes/VIL_Cube_Gen.log'}
+    #
+    # prd_hrrr = {'products': ['uwind','vwind','tmp'], 'cube height': 3, 'lats': hrrr_lats, 'lons': hrrr_lons,
+    #             'UTM': hrrr_utmdict, 'UTM-latlon idxs': hrrr_traceback,
+    #             'alts': np.array(hrrr_sample['alt'][:]), 'sorted path': gb.PATH_PROJECT + '/Data/HRRR/Sorted/',
+    #             'output path': gb.PATH_PROJECT + '/Output/Weather Cubes/HRRR/', 'refresh rate': 3600, 'spatial res': 3000,
+    #             'log path': gb.PATH_PROJECT + '/Output/Weather Cubes/HRRR_Cube_Gen.log'}
 
-    prd_vil = {'products': ['VIL'], 'cube height': 1, 'lats': ciws_lats, 'lons': ciws_lons,
-               'UTM': ciws_utmdict, 'UTM-latlon idxs': ciws_traceback,
-               'alts': np.array(vil_sample['alt'][:]), 'sorted path': gb.PATH_PROJECT + '/Data/VIL/Sorted/',
-               'output path': gb.PATH_PROJECT + '/Output/Weather Cubes/VIL/', 'refresh rate': 150, 'spatial res': 1850,
-               'log path': gb.PATH_PROJECT + '/Output/Weather Cubes/VIL_Cube_Gen.log'}
-
-    prd_hrrr = {'products': ['uwind','vwind','tmp'], 'cube height': 3, 'lats': hrrr_lats, 'lons': hrrr_lons,
-                'UTM': hrrr_utmdict, 'UTM-latlon idxs': hrrr_traceback,
-                'alts': np.array(hrrr_sample['alt'][:]), 'sorted path': gb.PATH_PROJECT + '/Data/HRRR/Sorted/',
-                'output path': gb.PATH_PROJECT + '/Output/Weather Cubes/HRRR/', 'refresh rate': 3600, 'spatial res': 3000,
-                'log path': gb.PATH_PROJECT + '/Output/Weather Cubes/HRRR_Cube_Gen.log'}
-
-    et_sample.close(); vil_sample.close(); hrrr_sample.close();
+    et_sample.close(); #vil_sample.close(); hrrr_sample.close();
 
     fmode = 'w'
-    if os.path.isfile(prd_hrrr['log path']):
-        overwrite = input("{} exists: overwrite? [y/n]".format(prd_hrrr['log path']))
+    if os.path.isfile(prd_et['log path']):
+        overwrite = input("{} exists: overwrite? [y/n]".format(prd_et['log path']))
         if overwrite.lower() == 'y':
             fmode = 'w'
         elif overwrite.lower() == 'n':
             fmode == 'a'
-    logging.basicConfig(filename=prd_hrrr['log path'], filemode=fmode, level=logging.INFO)
+    logging.basicConfig(filename=prd_et['log path'], filemode=fmode, level=logging.INFO)
 
-    for product in [prd_hrrr, prd_et, prd_vil]:
+    for product in [prd_et]:
 
         USES_CURRENT = gb.LOOKAHEAD_SECONDS.__contains__(0.)
         USES_FORECAST = gb.LOOKAHEAD_SECONDS[len(gb.LOOKAHEAD_SECONDS) - 1] > 0.

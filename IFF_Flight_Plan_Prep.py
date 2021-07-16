@@ -8,6 +8,9 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import datetime
 import logging
+import time
+os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessing\\Library\\share'
+#os.environ['PROJ_LIB'] = 'C:\\Users\\User\\anaconda3\\envs\\z_env\\Library\\share'
 from mpl_toolkits.basemap import Basemap
 from matplotlib import pyplot as plt
 
@@ -50,8 +53,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     modified_filename = file.split('_')
     if not (modified_filename[0] == 'Flight') and len(modified_filename) >= 6: modified_filename.pop(0)
     modified_filename = '_'.join(modified_filename)
-    modified_filename = modified_filename.replace('Flight_Plan','Flight Track')
-    modified_filename = modified_filename.replace('_fp.txt', '_trk.txt')
+    modified_filename = 'Flight_Track_{}'.format(modified_filename.replace('_fp', ''))
     PATH_TRACK_POINT = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/' + save_date.isoformat()[:10] + \
                        '/' + modified_filename
     if not (os.path.isfile(PATH_TRACK_POINT)):
@@ -69,6 +71,9 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     str_waypoints = first_filed_entry[3]
     str_final_waypoints = last_filed_entry[3]
     waypoints = gb.clean_waypoints(str_waypoints.split('.', 100))
+    orig, dest = [x for x in parent_dir.split('_') if x[0]== 'K' and len(x) == 4]
+    if not waypoints[0] == orig: waypoints.insert(0,orig)
+    if not waypoints[-1] == dest: waypoints.extend(dest)
     # print(waypoints)
 
     lat_waypoints = np.zeros((len(waypoints),), np.float64)
@@ -79,15 +84,28 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     # Parse lat/lon/alt? with openNav
     for i in range(len(waypoints)):
         # Open HTTP request to access waypoint page
-        if len(waypoints[i]) == LEN_AIRPORT:
-            r = requests.get(LINK_AIRPORT + waypoints[i])
-        elif len(waypoints[i]) == LEN_WAYPOINT:
-            r = requests.get(LINK_WAYPOINT + waypoints[i])
-        elif len(waypoints[i]) == LEN_NAVAID:
-            r = requests.get(LINK_NAVAID + waypoints[i])
-        else:
-            logging.error(" UNKNOWN ENTRY" + waypoints[i])
-            exit(13)
+        retries = 0
+        while retries < 5:
+            try:
+                if len(waypoints[i]) == LEN_AIRPORT:
+                    r = requests.get(LINK_AIRPORT + waypoints[i])
+                    break
+                elif len(waypoints[i]) == LEN_WAYPOINT:
+                    r = requests.get(LINK_WAYPOINT + waypoints[i])
+                    break
+                elif len(waypoints[i]) == LEN_NAVAID:
+                    r = requests.get(LINK_NAVAID + waypoints[i])
+                    break
+                else:
+                    logging.error(" UNKNOWN ENTRY" + waypoints[i])
+                    return(13)
+            except:
+                retries += 1
+                time.sleep(1)
+        if retries >= 5:
+            logging.error('{}_{}: Max Retries exceeded for marker {}'.format(save_date,file,waypoints[i]))
+            return(404)
+
 
         # Open and search HTML page in BeautifulSoup
         soup = BeautifulSoup(r.text, 'html.parser')
@@ -111,7 +129,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
                 lon = gb.DegMinSec_to_Degree(DegMinSec_lon)
             elif str_result.__contains__('Elevation'):
                 str_alt = str_result[len('Elevation'):]
-                alt = float(str_alt.split(' ')[0])
+                alt = float(str_alt.split(' ')[0].replace(',',''))
 
         lat_waypoints[i] = lat
         lon_waypoints[i] = lon
@@ -208,31 +226,38 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', save_date, data, file, orig_filename=file,
                         bool_delete_original=False)
 
-    '''
-    # Plot Flight Plan to Verify using Basemap
-    m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
-                resolution='l', area_thresh=1000., projection='lcc',
-                lat_0=gb.LAT_ORIGIN, lon_0=gb.LON_ORIGIN)
-    m.drawcoastlines()
-    Parallels = np.arange(0., 80., 10.)
-    Meridians = np.arange(10., 351., 20.)
 
-    # Labels = [left,right,top,bottom]
-    m.drawparallels(Parallels, labels=[False, True, True, False])
-    m.drawmeridians(Meridians, labels=[True, False, False, True])
-    fig = plt.gca()
-
-    m.scatter(lon_coord, lat_coord, marker='.', color='red', latlon=True, )
-    #lbl_x, lbl_y  = m(lon_waypoints, lat_waypoints)
-    #for i in range(len(waypoints)):
-    #    plt.annotate(waypoints[i], (lbl_x[i], lbl_y[i]))
-    m.plot(lon_waypoints, lat_waypoints, marker='.', color='blue', latlon=True)
-    plt.show(block=False)
-    PATH_FLIGHT_PLAN_FIGS = gb.PATH_PROJECT + '/Output/Flight Plans/Plots/' + file[:-3] + gb.FIGURE_FORMAT
-    plt.savefig(PATH_FLIGHT_PLAN_FIGS, dpi=300)
-    plt.close()
-    '''
-
+    # # Plot Flight Plan to Verify using Basemap
+    # m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
+    #             resolution='l', area_thresh=1000., projection='lcc',
+    #             lat_0=gb.LAT_ORIGIN, lon_0=gb.LON_ORIGIN)
+    # m.drawcoastlines()
+    # Parallels = np.arange(0., 80., 10.)
+    # Meridians = np.arange(10., 351., 20.)
+    #
+    # # Labels = [left,right,top,bottom]
+    # m.drawparallels(Parallels, labels=[False, True, True, False])
+    # m.drawmeridians(Meridians, labels=[True, False, False, True])
+    # fig = plt.gca()
+    #
+    # m.scatter(lon_coord, lat_coord, marker='.', color='red', latlon=True, )
+    # #lbl_x, lbl_y  = m(lon_waypoints, lat_waypoints)
+    # #for i in range(len(waypoints)):
+    # #    plt.annotate(waypoints[i], (lbl_x[i], lbl_y[i]))
+    # m.plot(lon_waypoints, lat_waypoints, marker='.', color='blue', latlon=True)
+    # plt.show(block=False)
+    # PATH_FLIGHT_PLAN_FIGS = gb.PATH_PROJECT + '/Output/Flight Plans/Plots/' + file[:-3] + gb.FIGURE_FORMAT
+    # plt.savefig(PATH_FLIGHT_PLAN_FIGS, dpi=300)
+    # plt.close()
+    #
+    # fig = plt.figure(); ax = plt.axes(projection='3d')
+    # ax.plot(lat_coord, lon_coord, alt_coord, color='blue')
+    # ax.set_xlabel('degrees latitude')
+    # ax.set_ylabel('degree longitude')
+    # ax.set_zlabel('altitude (ft)')
+    # plt.legend(); plt.title(file)
+    # plt.savefig('.'.join(PATH_FLIGHT_PLAN_FIGS.split('.')[:-1]) + ' 3D' + gb.FIGURE_FORMAT)
+    # plt.close()
     print(file + ' read')
 
 
@@ -256,7 +281,7 @@ def main():
                                 LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT, PATH_FP_LOG)
 
     os.chdir(PATH_FLIGHT_PLANS)
-    data_dirs = [x for x in os.listdir() if not (x == 'Shifted' or x == 'Sorted')]
+    data_dirs = [x for x in os.listdir() if os.path.isdir(x) and not (x == 'Shifted' or x == 'Sorted' or x == 'Interpolated')]
     for directory in data_dirs:
         print('\n\nReading from ' + directory)
         os.chdir(directory)

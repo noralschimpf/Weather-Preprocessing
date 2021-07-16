@@ -133,7 +133,8 @@ def main():
     PATH_LOG = os.path.join(gb.PATH_PROJECT, 'Output','Grib_data.log')
     logging.basicConfig(filename=PATH_LOG, filemode='w', level=logging.INFO)
     logging.info('GRIB prep started: {}'.format(datetime.now()))
-    source_data = 'D:/NathanSchimpf/Aircraft-Data/NOAA Data'
+    #source_data = 'D:/NathanSchimpf/Aircraft-Data/NOAA Data'
+    source_data = 'M:/Preprocess/Data/NOAA Data'
     path_sorted = os.path.join(gb.PATH_PROJECT,'Data','HRRR','Sorted')
     if not os.path.isdir(path_sorted):
         os.makedirs(path_sorted)

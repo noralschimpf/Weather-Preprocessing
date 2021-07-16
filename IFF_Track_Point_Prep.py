@@ -4,8 +4,8 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import pandas as pd
 
-# os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessing\\Library\\share'
-os.environ['PROJ_LIB'] = 'C:\\Users\\User\\anaconda3\\envs\\z_env\\Library\\share'
+os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessing\\Library\\share'
+#os.environ['PROJ_LIB'] = 'C:\\Users\\User\\anaconda3\\envs\\z_env\\Library\\share'
 """
 Read Flight Track-Point Files and Plot in Basemap
 """
@@ -111,12 +111,12 @@ def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file
     # save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
 
     PATH_TO_SORTED_TRACKPOINTS = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/'
-    modified_filename = file.split('_')
+    modified_filename = 'Flight_Track_{}'.format(file.replace('_trk','')).split('_')
     if not (modified_filename[0] == 'Flight') and len(modified_filename) >= 6:
         modified_filename.pop(0)
     modified_filename = '_'.join(modified_filename)
     gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, save_date, save_data, modified_filename, orig_filename=file,
-                        bool_delete_original=True)
+                        bool_delete_original=False)
     print('processed ' + str(file))
     return 0
 
@@ -138,7 +138,7 @@ def main():
     sttime = datetime.datetime.now()
     logging.info(' Starting: ' + sttime.isoformat())
 
-    track_objs = [x for x in os.listdir() if not (x == 'Shifted' or x == 'Sorted')]
+    track_objs = [x for x in os.listdir() if not (x == 'Shifted' or x == 'Sorted' or x == 'Interpolated')]
     func_process_file = partial(process_file, gb.PATH_PROJECT, gb.TARGET_SAMPLE_SIZE, PATH_FT_LOG)
 
     for obj in track_objs:
