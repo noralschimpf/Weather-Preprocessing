@@ -1,6 +1,7 @@
 from netCDF4 import Dataset, num2date, date2num, MFDataset
 import numpy as np
 import os, logging
+os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessing\\Library\\share'
 from mpl_toolkits.basemap import Basemap
 from matplotlib import cm, pyplot as plt
 import Global_Tools as gb

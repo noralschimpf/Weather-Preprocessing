@@ -3,12 +3,12 @@ import shutil
 import subprocess
 
 pathprj = os.path.abspath('.')
-os.chdir('F:/Aircraft-Data/IFF Data/2019-01-10 to 2019-01-24')
+os.chdir('F:/Aircraft-Data/IFF Data/2018-11-01 to 2019-02-05')
 list_day_csvs = [os.path.abspath(x).replace('\\','\\\\') for x in os.listdir()]
 output_global = 'C:\\\\Users\\\\natha\\\\PycharmProjects\\\\WeatherPreProcessing\\\\Data'
 os.chdir(pathprj)
 # list_orig_dest_pairs = [('KJFK','KLAX'),('KIAH','KBOS'),('KATL','KORD'),('KATL','KMCO'),('KSEA','KDEN')]
-list_orig_dest_pairs = [('KORD','KJFK')]
+list_orig_dest_pairs = [('KORD','KLGA')]
 
 for orig, dest in list_orig_dest_pairs:
     for day in list_day_csvs:
