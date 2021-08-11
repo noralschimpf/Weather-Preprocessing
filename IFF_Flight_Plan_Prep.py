@@ -13,6 +13,7 @@ os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessin
 #os.environ['PROJ_LIB'] = 'C:\\Users\\User\\anaconda3\\envs\\z_env\\Library\\share'
 from mpl_toolkits.basemap import Basemap
 from matplotlib import pyplot as plt
+from utils.climbrate_calc import cr_calc
 
 
 def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
@@ -41,6 +42,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
 
     first_filed_entry = filtered_data[index_first_filed].squeeze()
     last_filed_entry = filtered_data[index_last_filed].squeeze()
+    CRUISING_ALT = first_filed_entry[5] * 100.
 
     # Search for track-point file
     trk_time, trk_lat, trk_lon = None, None, None
@@ -136,7 +138,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
 
         # Assign approx. Flight Altitude
         if (alt == 0. or np.isnan(alt)):
-            alt_waypoints[i] = first_filed_entry[5]*100.
+            alt_waypoints[i] = CRUISING_ALT
         else:
             alt_waypoints[i] = alt
 
@@ -222,7 +224,14 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
                 logging.exception("message")
                 return -13
 
+    climbrates = np.zeros((sample_size))
+    dict_cr = cr_calc(alt_coord=alt_coord, climbrate=np.zeros_like(alt_coord), T=60, z0=alt_coord[0],
+                      zf=alt_coord[-1], X=CRUISING_ALT, debug=False)
+
+    alt_coord = dict_cr['alt']
+
     data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T
+    newfile = 'Flight_Plan_{}'.format(file.replace('_fp',''))
     gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', save_date, data, file, orig_filename=file,
                         bool_delete_original=False)
 
