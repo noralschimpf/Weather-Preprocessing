@@ -384,7 +384,7 @@ def main():
         duration = edtime - sttime
         logging.info('done: ' + edtime.isoformat())
         logging.info('execution time:' + str(duration.total_seconds()) + ' s')
-        print('Execution complete. Check ' + product['path log'] + ' for details')
+        print('Execution complete. Check ' + product['log path'] + ' for details')
         cont = input("Completed {}: Continue? y/n".format(', '.join(product['products'])))
         if cont.lower() == 'n':
             break
