@@ -7,7 +7,7 @@ from dateutil import parser as dparse
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 import datetime
-import logging
+import logging, warnings, tqdm
 import time
 os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessing\\Library\\share'
 #os.environ['PROJ_LIB'] = 'C:\\Users\\User\\anaconda3\\envs\\z_env\\Library\\share'
@@ -17,9 +17,10 @@ from utils.climbrate_calc import cr_calc
 
 
 def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
-                 LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT, PATH_LOG, file):
+                 LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT, PATH_LOG, file, oldalt: bool = True, newalt: bool = True):
     logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
-    print('Testing ' + file)
+    logging.captureWarnings(True)
+    # print('Testing ' + file)
 
     data_frame = pd.read_csv(file, names=['callsign','flight number','timestamp','waypoints','alt1','alt2'])
 
@@ -163,78 +164,89 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     time_waypoints = np.interp(interp_dists, dists, knowntimes)
 
     # Waypoint Linear Interpolation
-    sample_size, slice_size = None, None
-    lat_coord, lon_coord, alt_coord, time_coord = None, None, None, None
+    newfile = 'Flight_Plan_{}'.format(file.replace('_fp', ''))
+    if oldalt:
+        sample_size, slice_size = None, None
+        lat_coord, lon_coord, alt_coord, time_coord = None, None, None, None
 
-    if gb.TARGET_SAMPLE_SIZE > 0:
-        samples_per_segment = [int(np.round(time_waypoints[i] - time_waypoints[i - 1])) for i in
-                               range(1, len(time_waypoints))]
-        sample_size = np.sum(samples_per_segment)
-        samples_per_segment = [x * gb.TARGET_SAMPLE_SIZE / sample_size for x in samples_per_segment]
-        sample_size = np.sum(samples_per_segment)
-        lat_coord = np.zeros((sample_size,), dtype=np.float)
-        lon_coord = np.zeros((sample_size,), dtype=np.float)
-        alt_coord = np.zeros((sample_size,), dtype=np.float)
-        time_coord = np.zeros((sample_size,), dtype=np.int)
-        for i in range(len(samples_per_segment)):
-            try:
-                bln_endpt = i == len(waypoints) - 1
-                sample_start = np.sum(samples_per_segment[:i])
-                sample_end = np.sum(samples_per_segment[:i + 1])
-                lon_coord[sample_start:sample_end] = np.linspace(lon_waypoints[i], lon_waypoints[i + 1],
-                                                                 samples_per_segment[i], endpoint=bln_endpt)
-                lat_coord[sample_start:sample_end] = np.linspace(lat_waypoints[i], lat_waypoints[i + 1],
-                                                                 samples_per_segment[i], endpoint=bln_endpt)
-                alt_coord[sample_start:sample_end] = np.linspace(alt_waypoints[i], alt_waypoints[i + 1],
-                                                                 samples_per_segment[i], endpoint=bln_endpt)
-                time_coord[sample_start:sample_end] = np.linspace(time_waypoints[i], time_waypoints[i + 1],
-                                                                  samples_per_segment[i], endpoint=bln_endpt)
-            except ValueError:
-                logging.exception('message')
-                return -13
-    else:
-        samples_per_segment = [int(np.round(time_waypoints[i] - time_waypoints[i - 1])) for i in
-                               range(1, len(time_waypoints))]
-        sample_size = np.sum(samples_per_segment)
-        lat_coord = np.zeros((sample_size,), dtype=np.float)
-        lon_coord = np.zeros((sample_size,), dtype=np.float)
-        alt_coord = np.zeros((sample_size,), dtype=np.float)
-        time_coord = np.zeros((sample_size,), dtype=np.int)
-        time_coord[0] = time_waypoints[0]
-        for i in range(len(samples_per_segment)):
-            sample_start = int(np.sum(samples_per_segment[:i]))
-            sample_end = int(np.sum(samples_per_segment[:i + 1]))
-            bln_endpt = i == len(samples_per_segment) - 1
-            try:
-                if i == 0:
-                    start_idx = 0
-                else:
-                    start_idx = 1
-                time_coord[sample_start:sample_end] = np.linspace(time_coord[sample_start - start_idx] + start_idx,
-                                                                  time_coord[sample_start - start_idx] + start_idx +
-                                                                  samples_per_segment[i], samples_per_segment[i],
-                                                                  endpoint=bln_endpt)
-                lat_coord[sample_start:sample_end] = np.linspace(lat_waypoints[i], lat_waypoints[i + 1],
-                                                                 samples_per_segment[i], endpoint=bln_endpt)
-                lon_coord[sample_start:sample_end] = np.linspace(lon_waypoints[i], lon_waypoints[i + 1],
-                                                                 samples_per_segment[i], endpoint=bln_endpt)
-                alt_coord[sample_start:sample_end] = np.linspace(alt_waypoints[i], alt_waypoints[i + 1],
-                                                                 samples_per_segment[i], endpoint=bln_endpt)
-            except ValueError:
-                logging.exception("message")
-                return -13
+        if gb.TARGET_SAMPLE_SIZE > 0:
+            samples_per_segment = [int(np.round(time_waypoints[i] - time_waypoints[i - 1])) for i in
+                                   range(1, len(time_waypoints))]
+            sample_size = np.sum(samples_per_segment)
+            samples_per_segment = [x * gb.TARGET_SAMPLE_SIZE / sample_size for x in samples_per_segment]
+            sample_size = np.sum(samples_per_segment)
+            lat_coord = np.zeros((sample_size,), dtype=np.float)
+            lon_coord = np.zeros((sample_size,), dtype=np.float)
+            alt_coord = np.zeros((sample_size,), dtype=np.float)
+            time_coord = np.zeros((sample_size,), dtype=np.int)
+            for i in range(len(samples_per_segment)):
+                try:
+                    bln_endpt = i == len(waypoints) - 1
+                    sample_start = np.sum(samples_per_segment[:i])
+                    sample_end = np.sum(samples_per_segment[:i + 1])
+                    lon_coord[sample_start:sample_end] = np.linspace(lon_waypoints[i], lon_waypoints[i + 1],
+                                                                     samples_per_segment[i], endpoint=bln_endpt)
+                    lat_coord[sample_start:sample_end] = np.linspace(lat_waypoints[i], lat_waypoints[i + 1],
+                                                                     samples_per_segment[i], endpoint=bln_endpt)
+                    alt_coord[sample_start:sample_end] = np.linspace(alt_waypoints[i], alt_waypoints[i + 1],
+                                                                     samples_per_segment[i], endpoint=bln_endpt)
+                    time_coord[sample_start:sample_end] = np.linspace(time_waypoints[i], time_waypoints[i + 1],
+                                                                      samples_per_segment[i], endpoint=bln_endpt)
+                except ValueError:
+                    logging.exception('message')
+                    return -13
+        else:
+            samples_per_segment = [int(np.round(time_waypoints[i] - time_waypoints[i - 1])) for i in
+                                   range(1, len(time_waypoints))]
+            sample_size = np.sum(samples_per_segment)
+            lat_coord = np.zeros((sample_size,), dtype=np.float)
+            lon_coord = np.zeros((sample_size,), dtype=np.float)
+            alt_coord = np.zeros((sample_size,), dtype=np.float)
+            time_coord = np.zeros((sample_size,), dtype=np.int)
+            time_coord[0] = time_waypoints[0]
+            for i in range(len(samples_per_segment)):
+                sample_start = int(np.sum(samples_per_segment[:i]))
+                sample_end = int(np.sum(samples_per_segment[:i + 1]))
+                bln_endpt = i == len(samples_per_segment) - 1
+                try:
+                    if i == 0:
+                        start_idx = 0
+                    else:
+                        start_idx = 1
+                    time_coord[sample_start:sample_end] = np.linspace(time_coord[sample_start - start_idx] + start_idx,
+                                                                      time_coord[sample_start - start_idx] + start_idx +
+                                                                      samples_per_segment[i], samples_per_segment[i],
+                                                                      endpoint=bln_endpt)
+                    lat_coord[sample_start:sample_end] = np.linspace(lat_waypoints[i], lat_waypoints[i + 1],
+                                                                     samples_per_segment[i], endpoint=bln_endpt)
+                    lon_coord[sample_start:sample_end] = np.linspace(lon_waypoints[i], lon_waypoints[i + 1],
+                                                                     samples_per_segment[i], endpoint=bln_endpt)
+                    alt_coord[sample_start:sample_end] = np.linspace(alt_waypoints[i], alt_waypoints[i + 1],
+                                                                     samples_per_segment[i], endpoint=bln_endpt)
+                except ValueError:
+                    logging.exception("message")
+                    return -13
 
-    climbrates = np.zeros((sample_size))
-    dict_cr = cr_calc(alt_coord=alt_coord, climbrate=np.zeros_like(alt_coord), T=60, z0=alt_coord[0],
-                      zf=alt_coord[-1], X=CRUISING_ALT, debug=False)
+        data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T
+        gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', save_date, data, file, orig_filename=file,
+                            bool_delete_original=False)
 
-    alt_coord = dict_cr['alt']
-
-    data = np.vstack((time_coord, lat_coord, lon_coord, alt_coord)).T
-    newfile = 'Flight_Plan_{}'.format(file.replace('_fp',''))
-    gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Sorted/', save_date, data, file, orig_filename=file,
-                        bool_delete_original=False)
-
+    ## New Altitude Interpolation
+    if newalt:
+        climbrates = np.zeros((sample_size))
+        try:
+            dict_cr = cr_calc(alt_coord=alt_coord, climbrate=np.zeros_like(alt_coord), T=60, z0=alt_coord[0],
+                              zf=alt_coord[-1], X=max(alt_coord), debug=False)
+            new_alt = dict_cr['alt']
+            newdata = np.vstack((time_coord, lat_coord, lon_coord, new_alt)).T
+            gb.save_csv_by_date(PATH_FLIGHT_PLANS + 'Adjusted/', save_date, newdata, file, orig_filename=file,
+                                bool_delete_original=False)
+        except AssertionError as e:
+            logging.warning("{}:\t{}".format(file, e))
+        except ValueError as e:
+            logging.warning("{}:\t{}".format(file, e))
+        except IndexError as e:
+            logging.warning("{}:\t{}".format(file, e))
 
     # # Plot Flight Plan to Verify using Basemap
     # m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
@@ -267,7 +279,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     # plt.legend(); plt.title(file)
     # plt.savefig('.'.join(PATH_FLIGHT_PLAN_FIGS.split('.')[:-1]) + ' 3D' + gb.FIGURE_FORMAT)
     # plt.close()
-    print(file + ' read')
+    # print(file + ' read')
 
 
 def main():
@@ -282,6 +294,7 @@ def main():
     PATH_FP_LOG = gb.PATH_PROJECT + '/Output/Flight Plans/FP_Prep.log'
 
     logging.basicConfig(filename=PATH_FP_LOG, filemode='w', level=logging.INFO)
+    logging.captureWarnings(True)
     logging.warning(' negative sample size. Using default 1 sample/sec for flight plan')
     sttime = datetime.datetime.now()
     logging.info(' Started:\t' + sttime.isoformat())
@@ -290,18 +303,18 @@ def main():
                                 LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT, PATH_FP_LOG)
 
     os.chdir(PATH_FLIGHT_PLANS)
-    data_dirs = [x for x in os.listdir() if os.path.isdir(x) and not (x == 'Shifted' or x == 'Sorted' or x == 'Interpolated')]
-    for directory in data_dirs:
-        print('\n\nReading from ' + directory)
+    data_dirs = [x for x in os.listdir() if os.path.isdir(x) and not ('Adjusted' in x or 'Sorted' in x or 'interp' in x)]
+    for directory in tqdm.tqdm(data_dirs, position=0):
+        # print('\n\nReading from ' + directory)
         os.chdir(directory)
         Flight_Plan_Files = [x for x in os.listdir() if (x.__contains__('_fp.txt'))]
         files = os.listdir()
 
         if gb.BLN_MULTIPROCESS:
             with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
-                exit_log = ex.map(func_process_file, files)
+                exit_log = list(tqdm.tqdm(ex.map(func_process_file, files), total=len(files), position=1, leave=False))
         else:
-            for file in Flight_Plan_Files:
+            for file in tqdm.tqdm(Flight_Plan_Files, position=1, leave=False):
                 func_process_file(file)
 
         os.chdir('..')

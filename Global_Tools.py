@@ -22,7 +22,7 @@ BLN_MULTIPROCESS = False
 CUBE_SIZE = 20
 CIWS_COMPLEVEL = 9
 TARGET_SAMPLE_SIZE = -500
-PROCESS_MAX = 6
+PROCESS_MAX = 8
 PATH_PROJECT = os.path.abspath('.')
 FIGURE_FORMAT = 'png'
 
@@ -299,7 +299,10 @@ def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, save_filename
     if orig_filename=='': orig_filename = save_filename
     str_current_date = datetime_obj.isoformat()[:10]
     if not (os.listdir(PATH_TO_DATA_DIR).__contains__(str_current_date)):
-        os.mkdir(PATH_TO_DATA_DIR + str_current_date)
+        try: os.mkdir(PATH_TO_DATA_DIR + str_current_date)
+        except FileExistsError:
+            pass
+
     PATH_START_DATE = PATH_TO_DATA_DIR + str_current_date + '/' + save_filename
     np.savetxt(PATH_START_DATE, data_to_save, delimiter=',', fmt='%s')
     if bool_delete_original:

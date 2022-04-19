@@ -285,9 +285,9 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
     cubes_rootgrp.variables['XPoints'].units = 'indexing for each weather cube'
     cubes_rootgrp.createVariable('YPoints', datatype=float, dimensions=('YPoints'))
     cubes_rootgrp.variables['YPoints'].units = 'indexing for each weather cube'
-    cubes_rootgrp.createVariable('latitude', datatype=float, dimensions=('time', 'XPoints', 'YPoints'))
-    cubes_rootgrp.createVariable('longitude', datatype=float, dimensions=('time', 'XPoints', 'YPoints'))
-    cubes_rootgrp.createVariable('altitudes', datatype=float, dimensions=('time','ZPoints'))
+    # cubes_rootgrp.createVariable('latitude', datatype=float, dimensions=('time', 'XPoints', 'YPoints'))
+    # cubes_rootgrp.createVariable('longitude', datatype=float, dimensions=('time', 'XPoints', 'YPoints'))
+    # cubes_rootgrp.createVariable('altitudes', datatype=float, dimensions=('time','ZPoints'))
     for prod in prd['products']:
         cubes_rootgrp.createVariable(prod, datatype=float, dimensions=('time', 'lookahead', 'ZPoints', 'XPoints', 'YPoints'))
 
@@ -300,8 +300,8 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
     cubes_rootgrp.variables['XPoints'][:] = np.arange(0, gb.CUBE_SIZE, 1)
     cubes_rootgrp.variables['YPoints'][:] = np.arange(0, gb.CUBE_SIZE, 1)
     cubes_rootgrp.variables['time'][:] = weather_cubes_time
-    cubes_rootgrp.variables['latitude'][:] = weather_cubes_lat
-    cubes_rootgrp.variables['longitude'][:] = weather_cubes_lon
+    # cubes_rootgrp.variables['latitude'][:] = weather_cubes_lat
+    # cubes_rootgrp.variables['longitude'][:] = weather_cubes_lon
     for p in range(len(prd['products'])):
         cubes_rootgrp.variables[prd['products'][p]][:] = weather_cubes_data[:,:,p,:,:,:]
     

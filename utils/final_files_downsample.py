@@ -11,11 +11,11 @@ def downsample_file(decimation_factor: int, abspath: str):
     newfile = None
 
     # Save interpolated files to sorted location
-    newdir = '\\'.join(abspath.split('\\')[:-3]) + '\\Interpolated'
+    newdir = '/'.join(abspath.split(os.sep)[:-3]) + '/{}-interp'.format(abspath.split(os.sep)[-3])
     if not os.path.isdir(newdir):
         os.mkdir(newdir)
-    newdate = abspath.split('\\')[-2]
-    newdir = newdir + '\\' + newdate
+    newdate = abspath.split(os.sep)[-2]
+    newdir = newdir + '/' + newdate
     if not os.path.isdir(newdir):
         os.mkdir(newdir)
 
@@ -71,55 +71,55 @@ def downsample_file(decimation_factor: int, abspath: str):
 def main():
     #rootpath = 'H:\\TorchDir Archive\\14 Days Unified 1 Second\\'
     #rootpath = 'D:/NathanSchimpf/PyCharmProjects/Weather-Preprocessing/Data'
-    rootpath = 'C:\\Users\\natha\\PycharmProjects\\WeatherPreProcessing\\Data'
+    rootpaths = ['C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/IFF_Flight_Plans/Sorted',
+                  'C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/IFF_Flight_Plans/Adjusted']
     dec_rate = 60
-    # rootpath = 'F:/Aircraft-Data/Torchdir/'
-    os.chdir(rootpath)
     func_process = partial(downsample_file, dec_rate)
 
+    #os.chdir('F:/Aircraft-Data/Flight Plans/Sorted')
+    for rootpath in rootpaths:
+        os.chdir(rootpath)
+        fp_dates = [x for x in os.listdir() if not 'tmp' in x and os.path.isdir(x)]
+        for date in fp_dates:
+            print('Flight Plans: {}'.format(date))
+            os.chdir(date)
+            files = [os.path.abspath(x) for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('_fp.txt')]
+            if gb.BLN_MULTIPROCESS:
+                with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
+                    executor.map(func_process, files)
+            else:
+                for file in files:
+                    func_process(file)
+            os.chdir('..')
+        os.chdir('../../')
 
-    fp_dates = [x for x in os.listdir('IFF_Flight_Plans/Sorted') if not 'tmp' in x and os.path.isdir('IFF_Flight_Plans/Sorted/{}'.format(x))]
-    os.chdir('IFF_Flight_Plans/Sorted')
-    for date in fp_dates:
-        print('Flight Plans: {}'.format(date))
-        os.chdir(date)
-        files = [os.path.abspath(x) for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('_fp.txt')]
-        if gb.BLN_MULTIPROCESS:
-            with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
-                executor.map(func_process, files)
-        else:
-            for file in files:
-                func_process(file)
-        os.chdir('..')
-    os.chdir('../../')
 
-
-    os.chdir('IFF_Track_Points/Sorted')
-    ft_dates = [x for x in os.listdir() if not 'tmp' in x and os.path.isdir(x)]
-    for date in ft_dates:
-        print('Flight Tracks: {}'.format(date))
-        os.chdir(date)
-        files = [os.path.abspath(x) for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('Flight_Track')]
-        if gb.BLN_MULTIPROCESS:
-            with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
-                executor.map(func_process, files)
-        else:
-            for file in files:
-                func_process(file)
-        os.chdir('..')
-    os.chdir('../../')
-    
-    wc_dates = [x for x in os.listdir('Weather Cubes') if os.path.isdir('Weather Cubes/{}'.format(x))]
-    os.chdir('Weather Cubes')
-    for date in wc_dates:
-        print('Weather Cubes: {}'.format(date))
-        os.chdir(date)
-        files = [x for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('.nc')]
-        files = [os.path.abspath(x) for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('.nc')]
-        for file in files:
-            func_process(file)
-        os.chdir('..')
-    os.chdir('..')
+    # os.chdir('IFF_Track_Points/Sorted')
+    # ft_dates = [x for x in os.listdir() if not 'tmp' in x and os.path.isdir(x)]
+    # for date in ft_dates:
+    #     print('Flight Tracks: {}'.format(date))
+    #     os.chdir(date)
+    #     files = [os.path.abspath(x) for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('Flight_Track')]
+    #     if gb.BLN_MULTIPROCESS:
+    #         with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
+    #             executor.map(func_process, files)
+    #     else:
+    #         for file in files:
+    #             func_process(file)
+    #     os.chdir('..')
+    # os.chdir('../../')
+    #
+    # wc_dates = [x for x in os.listdir('Weather Cubes') if os.path.isdir('Weather Cubes/{}'.format(x))]
+    # os.chdir('Weather Cubes')
+    # for date in wc_dates:
+    #     print('Weather Cubes: {}'.format(date))
+    #     os.chdir(date)
+    #     files = [x for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('.nc')]
+    #     files = [os.path.abspath(x) for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('.nc')]
+    #     for file in files:
+    #         func_process(file)
+    #     os.chdir('..')
+    # os.chdir('..')
 
 
 if __name__ == '__main__':
