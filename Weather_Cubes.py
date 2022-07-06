@@ -4,7 +4,7 @@ import math, os, datetime, logging
 #from mpl_toolkits.basemap import Basemap
 #from matplotlib import pyplot as plt
 from netCDF4 import Dataset, num2date, date2num
-import utm
+import utm, tqdm
 from dateutil import parser as dparser
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
@@ -36,13 +36,13 @@ def get_relevant_timestamps(flt_startdate, flt_enddate, flt_time, file, var, PAT
 
         diff = set(exp_fore_timestamps) - set(fore_timestamps)
         if len(diff) > 0:
-            logging.error("EchoTop Forecast Data Missing {} Entries During Flight {} ({} - {})".format(
-                len(diff), file, flt_startdate.isoformat(), flt_enddate.isoformat()))
+            logging.error("{} Forecast Data Missing {} Entries During Flight {} ({} - {})".format(
+                var, len(diff), file, flt_startdate.isoformat(), flt_enddate.isoformat()))
     if USES_CUR:
         PATH_DATA_CUR_DATE = [PATH_DATA_SORTED + flt_startdate.isoformat()[:10] + '/Current/',
                               PATH_DATA_SORTED + flt_enddate.isoformat()[:10] + '/Current/']
         if not (os.path.isdir(PATH_DATA_CUR_DATE[0]) and os.path.isdir(PATH_DATA_CUR_DATE[1])):
-            logging.error(' EchoTop Current Data Does Not Cover ' + file + '(' + flt_startdate.isoformat() + ' - '
+            logging.error(var + ' Current Data Does Not Cover ' + file + '(' + flt_startdate.isoformat() + ' - '
                           + flt_enddate.isoformat() + ')')
             return -1
 
@@ -76,8 +76,15 @@ def fill_cube_utm(weather_cube_proj: np.array, relevant_data: np.array, UTM_dict
     for idx_ in range(0, gb.CUBE_SIZE):
         for idx_ortho in range(0, gb.CUBE_SIZE):
             proj_lon, proj_lat = weather_cube_proj[0][idx_][idx_ortho], weather_cube_proj[1][idx_][idx_ortho]
-            wc_proj_northing, wc_proj_easting, wc_proj_zonenum, wcproj_zonechar = \
-                utm.from_latlon(proj_lat,proj_lon)
+            if proj_lon < -180.: proj_lon += 180.
+            if proj_lat < -180.: proj_lat += 180.
+            if proj_lon > 180: proj_lon -= 180.
+            if proj_lat > 180: proj_lat -= 180.
+            try:
+                wc_proj_northing, wc_proj_easting, wc_proj_zonenum, wcproj_zonechar = \
+                    utm.from_latlon(proj_lat,proj_lon)
+            except Exception as e:
+                raise
 
             # Find coordinates for relevant UTM region
             grpkey = '{}-{}'.format(wcproj_zonechar, wc_proj_zonenum)
@@ -148,8 +155,8 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
     weather_cubes_lon = np.zeros((len(flt_time), gb.CUBE_SIZE, gb.CUBE_SIZE))
     weather_cubes_alt = np.zeros((len(flt_time), prd['cube height']))
     weather_cubes_data = np.zeros((len(flt_time), len(gb.LOOKAHEAD_SECONDS), len(prd['products']), prd['cube height'], gb.CUBE_SIZE, gb.CUBE_SIZE))
-
-    print('Data Collection Begin\t', str(datetime.datetime.now()))
+    logstr = f'{file[-35:-7]}: Data Collection Begin\t {str(datetime.datetime.now())}'
+    logging.info(logstr)
     for i in range(len(flight_tr[:, ])):
         # Open EchoTop File Covering the Current Time
         if USES_CUR:
@@ -231,16 +238,23 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
 
         weather_cube_alt = prd['alts'][idx_alt-1:idx_alt+2]
 
-        weather_cube_actual, weather_cube_data = fill_cube_utm(weather_cube_proj, relevant_data, prd['UTM'], prd['UTM-latlon idxs'],
+        try:
+            weather_cube_actual, weather_cube_data = fill_cube_utm(weather_cube_proj, relevant_data, prd['UTM'], prd['UTM-latlon idxs'],
                            prd['lats'],prd['lons'], len(gb.LOOKAHEAD_SECONDS), len(prd['products']),prd['cube height'])
+        except Exception as e:
+            logging.error(f'{file}: {e}')
+            return -1
 
         # Print the max Error between cube points
         if i % 30 == 0:
             err = np.abs(weather_cube_actual - weather_cube_proj)
             err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
             maxerr = err_dist.flatten()[err_dist.argmax()]
-            print("{}\tMax Distance Err:\t".format(datetime.datetime.now()), "{:10.4f}\t".format(maxerr), "\t", str(i + 1),
-                  ' / ', len(flight_tr[:, 1] - 1), '\t', file.split('/')[-1])
+            # logstr = f"{} {}\tMax Distance Err:\t".format(file[-35:-7], datetime.datetime.now()), "{:10.4f}\t".format(maxerr), "\t", str(i + 1), \
+            #          ' / ', len(flight_tr[:, 1] - 1), '\t', file.split('/')[-1]
+            errstr = "{:10.4f}".format(maxerr)
+            logstr = f"{file[-35:-7]} {datetime.datetime.now()}\tMax Distance Err:\t{errstr}\t\t{str(i + 1)} / {len(flight_tr[:, 1] - 1)}\t{file.split('/')[-1]}"
+            logging.info(logstr)
 
         # Append current cube to list of data
         weather_cubes_lat[i] = weather_cube_actual[1]
@@ -263,7 +277,7 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
     # write to NetCDF
     file_local = file.split('/')[-1]
     PATH_NC_FILENAME = prd['output path'] + flt_startdate.isoformat()[:10] + '/' + file_local.split('.')[0] + '.nc'
-    print('WRITING TO:\t', PATH_NC_FILENAME)
+    logging.info(f'WRITING TO:\t{PATH_NC_FILENAME}')
     if not os.listdir(prd['output path']).__contains__(flt_startdate.isoformat()[:10]):
         os.mkdir(prd['output path'] + flt_startdate.isoformat()[:10])
     cubes_rootgrp = Dataset(PATH_NC_FILENAME, 'w', type='NetCDF4')
@@ -306,15 +320,17 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
         cubes_rootgrp.variables[prd['products'][p]][:] = weather_cubes_data[:,:,p,:,:,:]
     
     cubes_rootgrp.close()
-    print('COMPLETED:\t', PATH_NC_FILENAME)
+    logging.info(f'COMPLETED:\t{PATH_NC_FILENAME}')
     return 0
 
 
 def main():
     # open sample Trajectory and Echotop data
     PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Flight_Plans/Interpolated/'
+    # global_outpath = 'F:\\NathanSchimpf\\Aircraft-Data\\Weather Cubes\\'
+    global_outpath = '/media/dualboot/New Volume/NathanSchimpf/PyCharmProjects/Weather-Preprocessing/Output/Weather Cubes'
 
-    et_sample = Dataset('Data/EchoTop/Sorted/2019-01-10/Current/ECHO_TOP.2019-01-10T000000Z.nc','r', format='NETCDF4')
+    et_sample = Dataset('Data/EchoTop/Sorted/2019-01-10/Current/EchoTop.20190110T000000Z.nc', 'r', format='NETCDF4')
     #vil_sample = Dataset('Data/VIL/Sorted/2019-01-10/Current/VIL.2019-01-10T000000Z.nc','r',format='NETCDF4')
     #hrrr_sample = Dataset('Data/HRRR/Sorted/2019-01-10/Current/hrrr.2019-01-10T000000Z.wrfprsf00.nc')
     ciws_lats, ciws_lons = np.array(et_sample['lats'][:]), np.array(et_sample['lons'][:])
@@ -327,26 +343,27 @@ def main():
     prd_et = {'products': ['ECHO_TOP'], 'cube height': 1, 'lats': ciws_lats, 'lons': ciws_lons,
               'UTM': ciws_utmdict, 'UTM-latlon idxs': ciws_traceback,
               'alts': np.array(et_sample['alt'][:]), 'sorted path': gb.PATH_PROJECT + '/Data/EchoTop/Sorted/',
-              'output path': 'F:\\Aircraft-Data\\Weather Cubes\\ECHO_TOP\\', 'refresh rate': 150,'spatial res': 1850,
+              'output path': f'{global_outpath}/ECHO_TOP/'.replace('/',os.sep), 'refresh rate': 150,'spatial res': 1850,
               'log path': gb.PATH_PROJECT + '/Output/Weather Cubes/ECHO_TOP_Cube_Gen.log'}
 # gb.PATH_PROJECT + '/Output/Weather Cubes/ECHO_TOP/'
     # prd_vil = {'products': ['VIL'], 'cube height': 1, 'lats': ciws_lats, 'lons': ciws_lons,
     #            'UTM': ciws_utmdict, 'UTM-latlon idxs': ciws_traceback,
     #            'alts': np.array(vil_sample['alt'][:]), 'sorted path': gb.PATH_PROJECT + '/Data/VIL/Sorted/',
-    #            'output path': gb.PATH_PROJECT + '/Output/Weather Cubes/VIL/', 'refresh rate': 150, 'spatial res': 1850,
+    #            'output path': f'{global_outpath}/VIL/'.replace('/',os.sep), 'refresh rate': 150, 'spatial res': 1850,
     #            'log path': gb.PATH_PROJECT + '/Output/Weather Cubes/VIL_Cube_Gen.log'}
     #
     # prd_hrrr = {'products': ['uwind','vwind','tmp'], 'cube height': 3, 'lats': hrrr_lats, 'lons': hrrr_lons,
     #             'UTM': hrrr_utmdict, 'UTM-latlon idxs': hrrr_traceback,
     #             'alts': np.array(hrrr_sample['alt'][:]), 'sorted path': gb.PATH_PROJECT + '/Data/HRRR/Sorted/',
-    #             'output path': gb.PATH_PROJECT + '/Output/Weather Cubes/HRRR/', 'refresh rate': 3600, 'spatial res': 3000,
+    #             'output path': f'{global_outpath}/HRRR/'.replace('/',os.sep), 'refresh rate': 3600, 'spatial res': 3000,
     #             'log path': gb.PATH_PROJECT + '/Output/Weather Cubes/HRRR_Cube_Gen.log'}
 
     et_sample.close(); #vil_sample.close(); hrrr_sample.close();
 
     fmode = 'w'
     if os.path.isfile(prd_et['log path']):
-        overwrite = input("{} exists: overwrite? [y/n]".format(prd_et['log path']))
+        # overwrite = input("{} exists: overwrite? [y/n]".format(prd_et['log path']))
+        overwrite = 'y'
         if overwrite.lower() == 'y':
             fmode = 'w'
         elif overwrite.lower() == 'n':
@@ -354,6 +371,8 @@ def main():
     logging.basicConfig(filename=prd_et['log path'], filemode=fmode, level=logging.INFO)
 
     for product in [prd_et]:
+
+        if not os.path.isdir(product['output path']): os.makedirs(product['output path'])
 
         USES_CURRENT = gb.LOOKAHEAD_SECONDS.__contains__(0.)
         USES_FORECAST = gb.LOOKAHEAD_SECONDS[len(gb.LOOKAHEAD_SECONDS) - 1] > 0.
@@ -366,15 +385,17 @@ def main():
         os.chdir(PATH_COORDS)
         sttime = datetime.datetime.now()
         dirs = [x for x in os.listdir() if os.path.isdir(x)]
-        for dir in dirs:
+        for dir in tqdm.tqdm(dirs, position=0):
             os.chdir(dir)
 
             files = [x for x in os.listdir() if os.path.isfile(x)]
+            files = gb.filter_flights(flights=files, collections='test', skip=['original'], maxflights=10)
             files = [os.path.abspath('.') + '/' + file for file in files]
 
             if gb.BLN_MULTIPROCESS:
                 with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
-                    exit_code = ex.map(func_process_partial, files)
+                    exit_code = list(tqdm.tqdm(ex.map(func_process_partial, files), total=len(files),
+                                               position=1, leave=False))
             else:
                 for file in files:
                     func_process_partial(file)
@@ -384,10 +405,10 @@ def main():
         duration = edtime - sttime
         logging.info('done: ' + edtime.isoformat())
         logging.info('execution time:' + str(duration.total_seconds()) + ' s')
-        print('Execution complete. Check ' + product['log path'] + ' for details')
-        cont = input("Completed {}: Continue? y/n".format(', '.join(product['products'])))
-        if cont.lower() == 'n':
-            break
+        print('Execution complete. Check {} for details'.format(product['log path']))
+        #cont = input("Completed {}: Continue? y/n".format(', '.join(product['products'])))
+        #if cont.lower() == 'n':
+        #    break
 
         os.chdir(gb.PATH_PROJECT)
 

@@ -140,7 +140,7 @@ def main():
         os.makedirs(path_sorted)
 
     os.chdir(source_data)
-    dates = [x for x in os.listdir('.') if os.path.isdir(x)]
+    dates = [x for x in os.listdir('.') if os.path.isdir(x) and not 'Sorted' in x]
     for date in dates:
         print('\n\nSTART: {}\t{}'.format(date, datetime.now()))
         partial_process = partial(process_file, PATH_LOG, path_sorted, date)

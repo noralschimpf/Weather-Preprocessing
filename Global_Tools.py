@@ -18,11 +18,11 @@ LOOKAHEAD_SECONDS = [0.]
 FORE_REFRESH_RATE = 3600
 
 # Path / Project Vars
-BLN_MULTIPROCESS = False
+BLN_MULTIPROCESS = True
 CUBE_SIZE = 20
 CIWS_COMPLEVEL = 9
 TARGET_SAMPLE_SIZE = -500
-PROCESS_MAX = 8
+PROCESS_MAX = 20
 PATH_PROJECT = os.path.abspath('.')
 FIGURE_FORMAT = 'png'
 
@@ -298,12 +298,60 @@ def save_csv_by_date(PATH_TO_DATA_DIR, datetime_obj, data_to_save, save_filename
     '''
     if orig_filename=='': orig_filename = save_filename
     str_current_date = datetime_obj.isoformat()[:10]
-    if not (os.listdir(PATH_TO_DATA_DIR).__contains__(str_current_date)):
-        try: os.mkdir(PATH_TO_DATA_DIR + str_current_date)
-        except FileExistsError:
-            pass
+    booltest = False
+    try:
+        booltest = os.listdir(PATH_TO_DATA_DIR).__contains__(str_current_date)
+    except FileNotFoundError: pass
+
+    if not booltest: os.makedirs(PATH_TO_DATA_DIR + str_current_date)
+
 
     PATH_START_DATE = PATH_TO_DATA_DIR + str_current_date + '/' + save_filename
     np.savetxt(PATH_START_DATE, data_to_save, delimiter=',', fmt='%s')
     if bool_delete_original:
         os.remove(orig_filename)
+
+def filter_flights(flights: list, collections: str = 'expanded', maxflights: int = 20, skip: str = []):
+    '''
+    limit files collection to one of the four expanded datasets, to reduce collection time before training?
+    :param flights: list of flight files
+    :param collections: string: "expanded", "regional", "directional", "test" - which dataset to filter for
+    :return:
+    '''
+    flights_org = ['KJFK_KLAX', 'KATL_KORD', 'KATL_KMCO', 'KIAH_KBOS', 'KSEA-KDEN', 'KORD_KLGA']
+    flights_exp = ['KSEA_KDEN', 'KATL_KMCO', 'KATL_KORD', 'KJFK_KLAX', 'KIAH_KBOS', 'KLAX_KSFO', 'KSEA_KPDX', 'KSEA_KLAX', 'KSFO_KSEA', 'KBOS_KLGA', 'KSJC_KLAX', 'KFLL_KATL', 'KHOU_KDAL', 'KSEA_KGEG', 'KDFW_KLAX']
+    flights_reg = ['KSEA_KDEN', 'KATL_KMCO', 'KATL_KORD', 'KJFK_KLAX', 'KIAH_KBOS', 'KLAX_KSFO',
+                   'KSEA_KPDX', 'KSEA_KLAX', 'KSFO_KSEA', 'KBOS_KLGA', 'KSJC_KLAX', 'KFLL_KATL',
+                   'KHOU_KDAL', 'KSEA_KGEG', 'KDFW_KLAX']
+    flights_dir = ['KJFK_KLAX', 'KIAH_KBOS', 'KLAS_KLAX', 'KSEA_KPDX', 'KSEA_KLAX', 'KBOS_KLGA',
+                   'KORD_KLAX', 'KDFW_KLAX', 'KDEN_KLAX', 'KATL_KLGA']
+    flights_tst = ['KORD_KLGA', 'KATL_KDFW', 'KSFO_KSAN', 'KSLC_KDEN', 'KORD_KDCA', 'KBOS_KPHL']
+                   # 'KJFK_KSFO', 'KLAX_KSMF', 'KLAS_KSEA', 'KDEN_KLAS']
+
+    fltlist = None
+    if collections == 'expanded':       fltlist = flights_exp
+    elif collections == 'regional':     fltlist = flights_reg
+    elif collections == 'directional':  fltlist = flights_dir
+    elif collections == 'test':         fltlist = flights_tst
+    else:
+        print("ERR: INVALID COLLECTION SPECIFIED")
+        exit(-1)
+
+    set_flts = set(fltlist)
+    skipcnt = 0
+    if 'original' in skip:          set_flts = set_flts - set(flights_org); skipcnt += 1
+    if 'expanded' in skip:          set_flts = set_flts - set(flights_exp); skipcnt += 1
+    if 'regional' in skip:          set_flts = set_flts - set(flights_reg); skipcnt += 1
+    if 'directional' in skip:       set_flts = set_flts - set(flights_dir); skipcnt += 1
+    if 'test' in skip: set_flts =   set_flts - set(flights_tst); skipcnt += 1
+    if skipcnt != len(skip): print("ERR: INVALID SKIP STRINGS"); exit(-1)
+    fltlist = list(set_flts)
+
+    fltcount = {x: 0 for x in fltlist}
+    retflights = []
+    for flt in flights:
+        if flt[:9] in fltlist and fltcount[flt[:9]] < maxflights:
+            retflights.append(flt)
+            fltcount[flt[:9]] += 1
+    # flights = [x for x in flights if x[:9] in fltlist]
+    return retflights

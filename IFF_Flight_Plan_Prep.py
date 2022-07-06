@@ -11,8 +11,6 @@ import logging, warnings, tqdm
 import time
 os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessing\\Library\\share'
 #os.environ['PROJ_LIB'] = 'C:\\Users\\User\\anaconda3\\envs\\z_env\\Library\\share'
-from mpl_toolkits.basemap import Basemap
-from matplotlib import pyplot as plt
 from utils.climbrate_calc import cr_calc
 
 
@@ -22,13 +20,18 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     logging.captureWarnings(True)
     # print('Testing ' + file)
 
-    data_frame = pd.read_csv(file, names=['callsign','flight number','timestamp','waypoints','alt1','alt2'])
+    # read files and correct column order
+    data_frame = pd.read_csv(file, usecols=[2,3,4,8,9,10] , names=['timestamp', 'flight number','callsign','alt1','alt2', 'waypoints'], skiprows=1)
+    data_frame = data_frame[['callsign', 'flight number', 'timestamp', 'waypoints', 'alt1', 'alt2']]
 
     # filter for FP entries containing a Waypoint AND Timestamp
     filter_slice1 = data_frame['waypoints'] == 'Unknown'
     filter_slice2 = pd.isna(data_frame['timestamp'])
     filter_slice3 = pd.isna(data_frame['alt2'])
-    filtered_data = data_frame[~(filter_slice1 | filter_slice2 | filter_slice3)].values
+    filter_sliceType = isinstance(data_frame['callsign'], str) | isinstance(data_frame['flight number'], int) \
+                        | isinstance(data_frame['callsign'], str) | isinstance(data_frame['waypoints'], str) \
+                        | isinstance(data_frame['alt1'], float) | isinstance(data_frame['alt2'], float)
+    filtered_data = data_frame[~(filter_slice1 | filter_slice2 | filter_slice3 | filter_sliceType)].values
 
     if len(filtered_data[:, 0]) == 0:
         logging.error(
@@ -43,20 +46,23 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
 
     first_filed_entry = filtered_data[index_first_filed].squeeze()
     last_filed_entry = filtered_data[index_last_filed].squeeze()
-    CRUISING_ALT = first_filed_entry[5] * 100.
+    try: CRUISING_ALT = first_filed_entry[5] * 100.
+    except TypeError as e:
+        logging.error(f'{file}: {e}')
+        return -1
 
     # Search for track-point file
     trk_time, trk_lat, trk_lon = None, None, None
     bln_trk_found = False
 
-    parent_dir = os.path.abspath(file).split('\\')[-2]
+    parent_dir = os.path.abspath(file).split(os.sep)[-2]
     # save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
     save_date = dparse.parse(parent_dir, fuzzy=True)
 
     modified_filename = file.split('_')
     if not (modified_filename[0] == 'Flight') and len(modified_filename) >= 6: modified_filename.pop(0)
     modified_filename = '_'.join(modified_filename)
-    modified_filename = 'Flight_Track_{}'.format(modified_filename.replace('_fp', ''))
+    modified_filename = 'Flight_Track_{}'.format(modified_filename.replace('_fp', '_ft'))
     PATH_TRACK_POINT = PATH_PROJECT + '/Data/IFF_Track_Points/Sorted/' + save_date.isoformat()[:10] + \
                        '/' + modified_filename
     if not (os.path.isfile(PATH_TRACK_POINT)):
@@ -74,7 +80,7 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
     str_waypoints = first_filed_entry[3]
     str_final_waypoints = last_filed_entry[3]
     waypoints = gb.clean_waypoints(str_waypoints.split('.', 100))
-    orig, dest = [x for x in parent_dir.split('_') if x[0]== 'K' and len(x) == 4]
+    orig, dest = [x for x in file.split('_') if x[0]== 'K' and len(x) == 4]
     if not waypoints[0] == orig: waypoints.insert(0,orig)
     if not waypoints[-1] == dest: waypoints.extend(dest)
     # print(waypoints)
@@ -175,10 +181,10 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
             sample_size = np.sum(samples_per_segment)
             samples_per_segment = [x * gb.TARGET_SAMPLE_SIZE / sample_size for x in samples_per_segment]
             sample_size = np.sum(samples_per_segment)
-            lat_coord = np.zeros((sample_size,), dtype=np.float)
-            lon_coord = np.zeros((sample_size,), dtype=np.float)
-            alt_coord = np.zeros((sample_size,), dtype=np.float)
-            time_coord = np.zeros((sample_size,), dtype=np.int)
+            lat_coord = np.zeros((sample_size,), dtype=np.float64)
+            lon_coord = np.zeros((sample_size,), dtype=np.float64)
+            alt_coord = np.zeros((sample_size,), dtype=np.float64)
+            time_coord = np.zeros((sample_size,), dtype=int)
             for i in range(len(samples_per_segment)):
                 try:
                     bln_endpt = i == len(waypoints) - 1
@@ -199,10 +205,10 @@ def process_file(PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
             samples_per_segment = [int(np.round(time_waypoints[i] - time_waypoints[i - 1])) for i in
                                    range(1, len(time_waypoints))]
             sample_size = np.sum(samples_per_segment)
-            lat_coord = np.zeros((sample_size,), dtype=np.float)
-            lon_coord = np.zeros((sample_size,), dtype=np.float)
-            alt_coord = np.zeros((sample_size,), dtype=np.float)
-            time_coord = np.zeros((sample_size,), dtype=np.int)
+            lat_coord = np.zeros((sample_size,), dtype=np.float64)
+            lon_coord = np.zeros((sample_size,), dtype=np.float64)
+            alt_coord = np.zeros((sample_size,), dtype=np.float64)
+            time_coord = np.zeros((sample_size,), dtype=int)
             time_coord[0] = time_waypoints[0]
             for i in range(len(samples_per_segment)):
                 sample_start = int(np.sum(samples_per_segment[:i]))
@@ -300,10 +306,11 @@ def main():
     logging.info(' Started:\t' + sttime.isoformat())
 
     func_process_file = partial(process_file, gb.PATH_PROJECT, PATH_FLIGHT_PLANS, LINK_NAVAID, LINK_WAYPOINT,
-                                LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT, PATH_FP_LOG)
+                                LINK_AIRPORT, LEN_NAVAID, LEN_WAYPOINT, LEN_AIRPORT, PATH_FP_LOG,
+                                oldalt=True, newalt=False)
 
     os.chdir(PATH_FLIGHT_PLANS)
-    data_dirs = [x for x in os.listdir() if os.path.isdir(x) and not ('Adjusted' in x or 'Sorted' in x or 'interp' in x)]
+    data_dirs = [x for x in os.listdir() if os.path.isdir(x) and not ('Adjusted' in x or 'Sorted' in x or 'nterp' in x)]
     for directory in tqdm.tqdm(data_dirs, position=0):
         # print('\n\nReading from ' + directory)
         os.chdir(directory)

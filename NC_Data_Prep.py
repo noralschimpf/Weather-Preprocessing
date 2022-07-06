@@ -1,11 +1,12 @@
 from netCDF4 import Dataset, num2date, date2num, MFDataset
-import numpy as np
+# import numpy as np
 import os, logging
+import tqdm
 os.environ['PROJ_LIB'] = 'C:\\Users\\natha\\anaconda3\\envs\\WeatherPreProcessing\\Library\\share'
-from mpl_toolkits.basemap import Basemap
-from matplotlib import cm, pyplot as plt
+# from mpl_toolkits.basemap import Basemap
+# from matplotlib import cm, pyplot as plt
 import Global_Tools as gb
-from mpl_toolkits.mplot3d import axes3d
+# from mpl_toolkits.mplot3d import axes3d
 from concurrent import futures
 from functools import partial
 import pstats, io, datetime
@@ -35,8 +36,11 @@ def profile(fnc):
 def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
     logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
 
-    print('Processing ' + str(file))
-    rootgrp_orig = Dataset(file, "r", format="netCDF4")
+    # print('Processing ' + str(file))
+    try: rootgrp_orig = Dataset(file, "r", format="netCDF4")
+    except Exception as e:
+        logging.error(f'{file}: {e}')
+        return -1
 
     # Identify as Current or Forecast Data
     if rootgrp_orig.variables.keys().__contains__('forecast_period'):
@@ -74,11 +78,17 @@ def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
     # Save Data as Sorted netCDF4
     newfilename = '{}.{}Z.nc'.format(var, date.isoformat().replace(':',''))
     str_current_date = date.isoformat()[:10]
-    if not os.path.isdir(path_et + '\\Sorted\\' + str_current_date):
-        os.mkdir(path_et + '\\Sorted\\' + str_current_date)
-    if not os.path.isdir(path_et + '\\Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST):
-        os.mkdir(path_et + '\\Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST)
-    str_sorted_file = path_et + 'Sorted\\' + str_current_date + '\\' + STR_SORT_FORECAST + '\\' + newfilename
+    if not os.path.isdir(f'{path_et}{os.sep}Sorted{os.sep}{str_current_date}'):
+        try: os.makedirs(f'{path_et}{os.sep}Sorted{os.sep}{str_current_date}')
+        except FileExistsError as e:
+            logging.error(f'{file}: {e}')
+            return -1
+    if not os.path.isdir(f'{path_et}{os.sep}Sorted{os.sep}{str_current_date}{os.sep}{STR_SORT_FORECAST}'):
+        try: os.makedirs(f'{path_et}{os.sep}Sorted{os.sep}{str_current_date}{os.sep}{STR_SORT_FORECAST}')
+        except FileExistsError as e:
+            logging.error(f'{file}: {e}')
+            return -1
+    str_sorted_file = f'{path_et}{os.sep}Sorted{os.sep}{str_current_date}{os.sep}{STR_SORT_FORECAST}{os.sep}{newfilename}'
 
     '''
         Map EchoTop x,y to Lambert Conformal Projection
@@ -161,12 +171,12 @@ def process_file(var: str, path_et: str, PATH_LOG: str, file: str):
     rootgrp_orig.close()
     rootgrp_sorted.close()
 
-    print('converted ' + file)
+    # print('converted ' + file)
     return
 
 
 def main():
-    PATH_NC_RAW = {'et': gb.PATH_PROJECT + '\\Data\\EchoTop\\', 'vil': gb.PATH_PROJECT + '\\Data\\VIL\\'}
+    PATH_NC_RAW = {'et': gb.PATH_PROJECT + f'{os.sep}Data{os.sep}EchoTop', 'vil': gb.PATH_PROJECT + f'{os.sep}Data{os.sep}VIL'}
     products = {'vil': 'VIL', 'et': 'ECHO_TOP'}
     prod = 'et'
 
@@ -179,12 +189,14 @@ def main():
     process_file_partial = partial(process_file, products[prod], PATH_NC_RAW[prod], PATH_NC_LOG)
     files_to_delete = []
     dirs = [x for x in os.listdir('.') if os.path.isdir(x) and not x.__contains__('Sorted')]
-    for dir in dirs:
-        nc_files = ["{}\\{}".format(os.path.abspath(dir),x) for x in os.listdir(dir) if x.__contains__('.nc')]
+    for dir in tqdm.tqdm(dirs, position=0):
+        nc_files = ["{}{}{}".format(os.path.abspath(dir), os.sep, x) for x in os.listdir(dir) if x.__contains__('.nc')]
 
         if gb.BLN_MULTIPROCESS:
             with futures.ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
-                executor.map(process_file_partial, nc_files)
+                exit_log = list(tqdm.tqdm(executor.map(process_file_partial, nc_files), total=len(nc_files), position=1, leave=False))
+
+                # executor.map(process_file_partial, nc_files)
         else:
             for file in nc_files:
                 process_file_partial(file)

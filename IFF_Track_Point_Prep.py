@@ -11,10 +11,10 @@ Read Flight Track-Point Files and Plot in Basemap
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap, addcyclic
-from matplotlib import dates, cm
-from netCDF4 import Dataset, num2date
+# import matplotlib.pyplot as plt
+# from mpl_toolkits.basemap import Basemap, addcyclic
+# from matplotlib import dates, cm
+# from netCDF4 import Dataset, num2date
 import Global_Tools as gb
 
 # create Basemap instance
@@ -35,11 +35,11 @@ m.drawmeridians(np.arange(-160, -50, 10), labels=[0, 0, 0, 1])
 def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file: str):
     logging.basicConfig(filename=PATH_LOG, filemode='a', level=logging.INFO)
 
-    print('processing ' + file)
+    # print('processing ' + file)
 
-    df = pd.read_csv(file, names=['callsign', 'time', 'lat', 'lon', 'alt', 'gndspeed', 'course'])
+    df = pd.read_csv(file, names=['cnt', 'msgtype', 'time', 'flight number', 'callsign', 'lat', 'lon', 'alt', 'gndspeed','null', 'course', 'unknown'], skiprows=1)
     df = df.sort_values(by='time')
-    data = df.values[:, 1:5]
+    data = df[['time', 'lat', 'lon', 'alt']].values
     del df
 
     # data = np.loadtxt(file, delimiter=',', usecols=(1, 2, 3, 4))
@@ -56,7 +56,7 @@ def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file
         alts = data[:, 3]
 
     if data_slicing_incr < 0:
-        times = np.round(np.asarray(data[:, 0], dtype=np.float)).astype(np.int)
+        times = np.round(np.asarray(data[:, 0], dtype=float)).astype(int)
         lats = data[:, 1]
         lons = data[:, 2]
         alts = data[:, 3]
@@ -64,15 +64,15 @@ def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file
         samples_per_segment = [times[i] - times[i - 1] for i in range(1, len(times))]
         samples_total = int(np.sum(samples_per_segment))
 
-        times_interp = np.zeros((samples_total,), dtype=np.int)
-        lats_interp = np.zeros((samples_total,), dtype=np.float)
-        lons_interp = np.zeros((samples_total,), dtype=np.float)
-        alts_interp = np.zeros((samples_total,), dtype=np.float)
+        times_interp = np.zeros((samples_total,), dtype=int)
+        lats_interp = np.zeros((samples_total,), dtype=float)
+        lons_interp = np.zeros((samples_total,), dtype=float)
+        alts_interp = np.zeros((samples_total,), dtype=float)
 
         for i in range(len(samples_per_segment)):
             bln_endpt = i == len(samples_per_segment) - 1
-            sample_start = np.sum(samples_per_segment[:i], dtype=np.int)
-            sample_end = np.sum(samples_per_segment[:i + 1], dtype=np.int)
+            sample_start = np.sum(samples_per_segment[:i], dtype=int)
+            sample_end = np.sum(samples_per_segment[:i + 1], dtype=int)
             times_interp[sample_start:sample_end] = np.linspace(times[i], times[i + 1], samples_per_segment[i],
                                                                 endpoint=bln_endpt)
             lats_interp[sample_start:sample_end] = np.linspace(lats[i], lats[i + 1], samples_per_segment[i],
@@ -106,7 +106,7 @@ def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file
     save_data = np.vstack((times, lats, lons, alts)).T
     data_frame = pd.DataFrame(save_data, columns=['times', 'lats', 'lons', 'alts'])
     save_data = data_frame.sort_values(by=['times']).values
-    parent_dir = os.path.abspath(file).split('\\')[-2]
+    parent_dir = os.path.abspath(file).split(os.sep)[-2]
     save_date = dparse.parse(parent_dir, fuzzy=True)
     # save_date = datetime.datetime.strptime(parent_dir.split('-')[-1], '%b%d_%Y')
 
@@ -117,12 +117,12 @@ def process_file(PATH_PROJECT: str, TARGET_SAMPLE_SIZE: int, PATH_LOG: str, file
     modified_filename = '_'.join(modified_filename)
     gb.save_csv_by_date(PATH_TO_SORTED_TRACKPOINTS, save_date, save_data, modified_filename, orig_filename=file,
                         bool_delete_original=False)
-    print('processed ' + str(file))
+    # print('processed ' + str(file))
     return 0
 
 
 def main():
-    PATH_TRACK_POINTS = gb.PATH_PROJECT + '/data/IFF_Track_Points/'
+    PATH_TRACK_POINTS = gb.PATH_PROJECT + '/Data/IFF_Track_Points/'
     PATH_FT_LOG = gb.PATH_PROJECT + '/Output/Flight Tracks/FT_Prep.log'
     if os.path.isfile(PATH_FT_LOG):
         os.remove(PATH_FT_LOG)
@@ -145,7 +145,7 @@ def main():
         if os.path.isdir(obj):
             print('Reading from ' + obj)
             os.chdir(obj)
-            track_files = [x for x in os.listdir() if ('_trk.txt' in x)]
+            track_files = [x for x in os.listdir() if ('_ft.txt' in x)]
             if gb.BLN_MULTIPROCESS:
                 with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as ex:
                     return_code = ex.map(func_process_file, track_files)
@@ -153,7 +153,7 @@ def main():
                 for file in track_files:
                     func_process_file(file)
             os.chdir('..')
-        elif os.path.isfile(obj) and '_trk.txt' in obj:
+        elif os.path.isfile(obj) and '_ft.txt' in obj:
             func_process_file(obj)
 
         # plot show

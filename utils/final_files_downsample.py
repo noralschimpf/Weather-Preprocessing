@@ -71,8 +71,9 @@ def downsample_file(decimation_factor: int, abspath: str):
 def main():
     #rootpath = 'H:\\TorchDir Archive\\14 Days Unified 1 Second\\'
     #rootpath = 'D:/NathanSchimpf/PyCharmProjects/Weather-Preprocessing/Data'
-    rootpaths = ['C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/IFF_Flight_Plans/Sorted',
-                  'C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/IFF_Flight_Plans/Adjusted']
+    # rootpaths = ['C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/IFF_Flight_Plans/Sorted',
+    #               'C:/Users/natha/PycharmProjects/WeatherPreProcessing/Data/IFF_Flight_Plans/Adjusted']
+    rootpaths = ['/media/dualboot/New Volume/NathanSchimpf/PyCharmProjects/Weather-Preprocessing/Data/IFF_Flight_Plans/Sorted']
     dec_rate = 60
     func_process = partial(downsample_file, dec_rate)
 
@@ -94,20 +95,20 @@ def main():
         os.chdir('../../')
 
 
-    # os.chdir('IFF_Track_Points/Sorted')
-    # ft_dates = [x for x in os.listdir() if not 'tmp' in x and os.path.isdir(x)]
-    # for date in ft_dates:
-    #     print('Flight Tracks: {}'.format(date))
-    #     os.chdir(date)
-    #     files = [os.path.abspath(x) for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('Flight_Track')]
-    #     if gb.BLN_MULTIPROCESS:
-    #         with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
-    #             executor.map(func_process, files)
-    #     else:
-    #         for file in files:
-    #             func_process(file)
-    #     os.chdir('..')
-    # os.chdir('../../')
+    os.chdir('IFF_Track_Points/Sorted')
+    ft_dates = [x for x in os.listdir() if not 'tmp' in x and os.path.isdir(x)]
+    for date in ft_dates:
+        print('Flight Tracks: {}'.format(date))
+        os.chdir(date)
+        files = [os.path.abspath(x) for x in os.listdir('.') if os.path.isfile(x) and x.__contains__('Flight_Track')]
+        if gb.BLN_MULTIPROCESS:
+            with ProcessPoolExecutor(max_workers=gb.PROCESS_MAX) as executor:
+                executor.map(func_process, files)
+        else:
+            for file in files:
+                func_process(file)
+        os.chdir('..')
+    os.chdir('../../')
     #
     # wc_dates = [x for x in os.listdir('Weather Cubes') if os.path.isdir('Weather Cubes/{}'.format(x))]
     # os.chdir('Weather Cubes')
