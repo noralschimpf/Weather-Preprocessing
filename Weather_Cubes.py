@@ -134,20 +134,6 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
         logging.error("EchoTop Current Data Missing {} Entries During Flight {} ({} - {})".format(
             len(diff), file, flt_startdate.isoformat(), flt_enddate.isoformat()))
 
-    '''
-    # Create Basemap, plot on Latitude/Longitude scale
-    m = Basemap(width=12000000, height=9000000, rsphere=gb.R_EARTH,
-                resolution='l', area_thresh=1000., projection='lcc',
-                lat_0=gb.LAT_ORIGIN, lon_0=gb.LON_ORIGIN)
-    m.drawcoastlines()
-    Parallels = np.arange(0., 80., 10.)
-    Meridians = np.arange(10., 351., 20.)
-
-    # Labels = [left,right,top,bottom]
-    m.drawparallels(Parallels, labels=[False, True, True, False])
-    m.drawmeridians(Meridians, labels=[True, False, False, True])
-    fig2 = plt.gca()
-    '''
 
     # Closest-Approximation - From Weather Data
     weather_cubes_time = np.zeros((len(flt_time)), dtype=float)
@@ -196,27 +182,78 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
             data_fore_rootgrp.close()
 
         # Heading Projection & Ortho for point
+        # if i == len(flt_time[:])-1:
+        #     heading = gb.heading_a_to_b(flt_lon[i-1], flt_lat[i-1], flt_lat[i], flt_lon[i])
+        # else:
+        #     heading = gb.heading_a_to_b(flt_lon[i], flt_lat[i], flt_lat[i + 1], flt_lon[i + 1])
+        # unitstep_x, unitstep_y, unitstep_ortho_x, unitstep_ortho_y = get_axes(prd['lats'], prd['lons'],
+        #                                                       flt_lat[i], flt_lon[i], heading, prd['spatial res'])
+        #
+        # # Generate 20-point axis orthogonal to heading
+        # centerline_ortho_x, actual_ortho_delta_x = np.linspace(- (gb.CUBE_SIZE / 2) * unitstep_ortho_x,
+        #                                                        (gb.CUBE_SIZE / 2) * unitstep_ortho_x,
+        #                                                        num=gb.CUBE_SIZE,
+        #                                                        retstep=True)
+        # centerline_ortho_y, actual_ortho_delta_y = np.linspace(- (gb.CUBE_SIZE / 2) * unitstep_ortho_y,
+        #                                                        (gb.CUBE_SIZE / 2) * unitstep_ortho_y,
+        #                                                        num=gb.CUBE_SIZE,
+        #                                                        retstep=True)
+        # # Generate 20-point axis along heading
+        # centerline_x, actual_delta_x = np.linspace(- (gb.CUBE_SIZE / 2) * unitstep_x,
+        #                                            (gb.CUBE_SIZE / 2) * unitstep_x, num=gb.CUBE_SIZE, retstep=True)
+        # centerline_y, actual_delta_y = np.linspace(- (gb.CUBE_SIZE / 2) * unitstep_y,
+        #                                            (gb.CUBE_SIZE / 2) * unitstep_y, num=gb.CUBE_SIZE, retstep=True)
+
+        #TODO: BRESENHAM
+        # Collect heading & ortho endpoints, then
+
+        # Heading & Ortho Projection
         if i == len(flt_time[:])-1:
             heading = gb.heading_a_to_b(flt_lon[i-1], flt_lat[i-1], flt_lat[i], flt_lon[i])
         else:
             heading = gb.heading_a_to_b(flt_lon[i], flt_lat[i], flt_lat[i + 1], flt_lon[i + 1])
+        # Generate unit-step, to define approx 20-point cube length
         unitstep_x, unitstep_y, unitstep_ortho_x, unitstep_ortho_y = get_axes(prd['lats'], prd['lons'],
                                                               flt_lat[i], flt_lon[i], heading, prd['spatial res'])
+        # X_x, X_y: along the heading, x&y components
+        # X_ortho_x, X_ortho_y: orthogonal to heading, x&y components
 
-        # Generate 20-point axis orthogonal to heading
-        centerline_ortho_x, actual_ortho_delta_x = np.linspace(- (gb.CUBE_SIZE / 2) * unitstep_ortho_x,
-                                                               (gb.CUBE_SIZE / 2) * unitstep_ortho_x,
-                                                               num=gb.CUBE_SIZE,
-                                                               retstep=True)
-        centerline_ortho_y, actual_ortho_delta_y = np.linspace(- (gb.CUBE_SIZE / 2) * unitstep_ortho_y,
-                                                               (gb.CUBE_SIZE / 2) * unitstep_ortho_y,
-                                                               num=gb.CUBE_SIZE,
-                                                               retstep=True)
-        # Generate 20-point axis along heading
-        centerline_x, actual_delta_x = np.linspace(- (gb.CUBE_SIZE / 2) * unitstep_x,
-                                                   (gb.CUBE_SIZE / 2) * unitstep_x, num=gb.CUBE_SIZE, retstep=True)
-        centerline_y, actual_delta_y = np.linspace(- (gb.CUBE_SIZE / 2) * unitstep_y,
-                                                   (gb.CUBE_SIZE / 2) * unitstep_y, num=gb.CUBE_SIZE, retstep=True)
+        # TODO: BRESENHAM
+        # Collect Cube Corners, then
+        corners_proj = np.zeros((2, 4), dtype=float)
+        corners_proj[0] = flt_lon[i] + np.tile([-(gb.CUBE_SIZE / 2) * (unitstep_x + unitstep_ortho_x),
+                                                (gb.CUBE_SIZE / 2) * (unitstep_x + unitstep_ortho_x)], 2)
+        corners_proj[1] = flt_lat[i] + np.tile([-(gb.CUBE_SIZE / 2) * (unitstep_y + unitstep_ortho_y),
+                                                (gb.CUBE_SIZE / 2) * (unitstep_y + unitstep_ortho_y)], 2)
+
+        #TODO: BRESENHAM
+        # Convert corner coordinates into echotop/integer coordinates]
+        corners_idx = np.zeros_like(corners_proj)
+        for idx in range(corners_proj.shape[1]):
+            corners_idx[0] = np.abs(lons - corners_proj[0, idx]).argmin()
+            corners_idx[1] = np.abs(lats - corners_proj[1, idx]).argmin()
+
+        # TODO: BRESENHAM
+        # Fill outline & Cube idxs via Bresenham, then
+        cube_idxs_bresenham = bresenham_idxs(corners_idx)
+
+
+        # TODO: BRESENHAM
+        # fill cube using idxs
+        weather_cube_actual =np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
+        weather_cube_data = np.zeros((len(gb.LOOKAHEAD_SECONDS), len(prd['products']), prd['cube height'],
+                                      gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
+
+        weather_cube_actual[0] = lons[cube_idxs_bresenham[0]].reshape(gb.CUBE_SIZE, gb.CUBE_SIZE)
+        weather_cube_actual[1] = lats[cube_idxs_bresenham[1]].reshape(gb.CUBE_SIZE, gb.CUBE_SIZE)
+
+        # BORROW FROM FILL_CUBE_UTM
+        for idx_ in range(0, gb.CUBE_SIZE):
+            for idx_ortho in range(0, gb.CUBE_SIZE):
+                weather_cube_data[:,:,:,idx,idx_ortho] = \
+                    relevant_data[:,:,:,cube_idxs_bresenham[0,idx,idx_ortho],cube_idxs_bresenham[1,idx,idx_ortho]]
+
+
 
         # Collect and Append Single Cube
         weather_cube_proj = np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
@@ -326,11 +363,11 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
 
 def main():
     # open sample Trajectory and Echotop data
-    PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Flight_Plans/Interpolated/'
+    PATH_COORDS = gb.PATH_PROJECT + '/Data/IFF_Flight_Plans/Sorted-interp/'
     # global_outpath = 'F:\\NathanSchimpf\\Aircraft-Data\\Weather Cubes\\'
     global_outpath = '/media/dualboot/New Volume/NathanSchimpf/PyCharmProjects/Weather-Preprocessing/Output/Weather Cubes'
 
-    et_sample = Dataset('Data/EchoTop/Sorted/2019-01-10/Current/EchoTop.20190110T000000Z.nc', 'r', format='NETCDF4')
+    et_sample = Dataset('Data/EchoTop/Sorted/2018-11-01/Current/ECHO_TOP.2018-11-01T000000Z.nc', 'r', format='NETCDF4')
     #vil_sample = Dataset('Data/VIL/Sorted/2019-01-10/Current/VIL.2019-01-10T000000Z.nc','r',format='NETCDF4')
     #hrrr_sample = Dataset('Data/HRRR/Sorted/2019-01-10/Current/hrrr.2019-01-10T000000Z.wrfprsf00.nc')
     ciws_lats, ciws_lons = np.array(et_sample['lats'][:]), np.array(et_sample['lons'][:])
