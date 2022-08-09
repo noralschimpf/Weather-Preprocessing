@@ -212,49 +212,46 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
             heading = gb.heading_a_to_b(flt_lon[i-1], flt_lat[i-1], flt_lat[i], flt_lon[i])
         else:
             heading = gb.heading_a_to_b(flt_lon[i], flt_lat[i], flt_lat[i + 1], flt_lon[i + 1])
-        # Generate unit-step, to define approx 20-point cube length
-        unitstep_x, unitstep_y, unitstep_ortho_x, unitstep_ortho_y = get_axes(prd['lats'], prd['lons'],
-                                                              flt_lat[i], flt_lon[i], heading, prd['spatial res'])
-        # X_x, X_y: along the heading, x&y components
-        # X_ortho_x, X_ortho_y: orthogonal to heading, x&y components
 
-        # TODO: BRESENHAM
-        # Collect Cube Corners, then
-        corners_proj = np.zeros((2, 4), dtype=float)
-        corners_proj[0] = flt_lon[i] + np.tile([-(gb.CUBE_SIZE / 2) * (unitstep_x + unitstep_ortho_x),
-                                                (gb.CUBE_SIZE / 2) * (unitstep_x + unitstep_ortho_x)], 2)
-        corners_proj[1] = flt_lat[i] + np.tile([-(gb.CUBE_SIZE / 2) * (unitstep_y + unitstep_ortho_y),
-                                                (gb.CUBE_SIZE / 2) * (unitstep_y + unitstep_ortho_y)], 2)
-
-        #TODO: BRESENHAM
-        # Convert corner coordinates into echotop/integer coordinates]
-        corners_idx = np.zeros_like(corners_proj)
-        for idx in range(corners_proj.shape[1]):
-            corners_idx[0] = np.abs(lons - corners_proj[0, idx]).argmin()
-            corners_idx[1] = np.abs(lats - corners_proj[1, idx]).argmin()
-
-        # TODO: BRESENHAM
-        # Fill outline & Cube idxs via Bresenham, then
-        cube_idxs_bresenham = bresenham_idxs(corners_idx)
+       # TODO: BRESENHAM
+       # Heading angle -> x:y ratio
+       a, b = int(1000*np.sin(heading)),int(1000*np.cos(heading))
+       cur_x, cur_y = nearest_idx(flt_lon[i], flt_lat[i], prd['lats'], prd['lons'])
 
 
-        # TODO: BRESENHAM
-        # fill cube using idxs
-        weather_cube_actual =np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
-        weather_cube_data = np.zeros((len(gb.LOOKAHEAD_SECONDS), len(prd['products']), prd['cube height'],
+       # TODO:BRESENHAM
+       # generate center-axis pts
+       tan_heading = np.tan(heading); tolerance=1e-3
+       axisa, axisb, working_a, working_b = np.zeros((gb.CUBE_SIZE)), np.zeros((gb.CUBE_SIZE)),0,0
+       for idx in range(gb.CUBE_SIZE):
+           cnt = (idx*tan_heading)
+           if np.abs(cnt-np.int(cnt)) > tolerance:
+               working_a += 1
+           else: working_b += 1
+           axisa[idx], axisb[idx] = working_a, working_b
+       axisa, axisb = axisa-(gb.CUBE_SIZE/2) + cur_x, axisb-(gb.CUBE_SIZE/2) + cur_y
+
+
+       # TODO: NOT-BRESENHAM
+       # collect axis from center (a:b, -a:-b, b:-a, -b:a)
+       weather_cube_coords = np.zeros((2,gb.CUBE_SIZE,gb.CUBE_SIZE), dtype=float)
+       weather_cube_data = np.zeros((len(gb.LOOKAHEAD_SECONDS),len(prd['products']),prd['cube height'],
                                       gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
+       weather_cube_alt = np.zeros((prd['cube height']))
 
-        weather_cube_actual[0] = lons[cube_idxs_bresenham[0]].reshape(gb.CUBE_SIZE, gb.CUBE_SIZE)
-        weather_cube_actual[1] = lats[cube_idxs_bresenham[1]].reshape(gb.CUBE_SIZE, gb.CUBE_SIZE)
+       # TODO: NOT-BRESEHNAM
+       # fill axes (a:b, -a:-b)
+       for idx_ in range(gb.CUBE_SIZE):
+           for idx_ortho in range(gb.CUBE_SIZE):
+               if idx_ >= len(prd['lons']) or idx_ortho >= len(prd['lons'][0]): continue
+               else:
+                   weather_cube_coords[0,idx_,idx_ortho] = prd['lats'][axisa[idx_],axisb[idx_ortho]]
+                   weather_cube_coords[1, idx_, idx_ortho] = prd['lons'][axisa[idx_],axisb[idx_ortho]]
+                   weather_cubes_data[:,:,:,idx_,idx_ortho] = relevant_data[:,:,:,axisa[idx_],axisb[idx_ortho]]
 
-        # BORROW FROM FILL_CUBE_UTM
-        for idx_ in range(0, gb.CUBE_SIZE):
-            for idx_ortho in range(0, gb.CUBE_SIZE):
-                weather_cube_data[:,:,:,idx,idx_ortho] = \
-                    relevant_data[:,:,:,cube_idxs_bresenham[0,idx,idx_ortho],cube_idxs_bresenham[1,idx,idx_ortho]]
 
-
-
+        # TODO: NOT-BRESENHAM REMOVE
+        '''
         # Collect and Append Single Cube
         weather_cube_proj = np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
         weather_cube_actual = np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
@@ -268,34 +265,37 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
                                                                                             (gb.CUBE_SIZE, 1)).T
         weather_cube_proj[1] = flt_lat[i] + np.tile(centerline_y, (gb.CUBE_SIZE, 1)) + np.tile(centerline_ortho_y,
                                                                                             (gb.CUBE_SIZE, 1)).T
-        '''
+        
         m.scatter(prd['lons'],prd['lats'],latlon=True)
         m.scatter(weather_cube_proj[0],weather_cube_proj[1],latlon=True)
         '''
 
-        weather_cube_alt = prd['alts'][idx_alt-1:idx_alt+2]
+       weather_cube_alt = prd['alts'][idx_alt-1:idx_alt+2]
 
-        try:
+
+       '''
+       try:
             weather_cube_actual, weather_cube_data = fill_cube_utm(weather_cube_proj, relevant_data, prd['UTM'], prd['UTM-latlon idxs'],
                            prd['lats'],prd['lons'], len(gb.LOOKAHEAD_SECONDS), len(prd['products']),prd['cube height'])
         except Exception as e:
             logging.error(f'{file}: {e}')
             return -1
+        '''
 
         # Print the max Error between cube points
         if i % 30 == 0:
-            err = np.abs(weather_cube_actual - weather_cube_proj)
-            err_dist = np.sqrt(np.square(err[0]) + np.square(err[1]))
-            maxerr = err_dist.flatten()[err_dist.argmax()]
+            spread = np.abs(weather_cube_coords.reshape(2,-1).max(1) - weather_cube_coords.reshape(2,-1).min(1))
+            spread_dist = np.sqrt(np.square(spread[0]) + np.square(spread[1]))
+            maxspread = spread_dist.flatten()[spread_dist.argmax()]
             # logstr = f"{} {}\tMax Distance Err:\t".format(file[-35:-7], datetime.datetime.now()), "{:10.4f}\t".format(maxerr), "\t", str(i + 1), \
             #          ' / ', len(flight_tr[:, 1] - 1), '\t', file.split('/')[-1]
-            errstr = "{:10.4f}".format(maxerr)
+            errstr = "{:10.4f}".format(maxspread)
             logstr = f"{file[-35:-7]} {datetime.datetime.now()}\tMax Distance Err:\t{errstr}\t\t{str(i + 1)} / {len(flight_tr[:, 1] - 1)}\t{file.split('/')[-1]}"
             logging.info(logstr)
 
         # Append current cube to list of data
-        weather_cubes_lat[i] = weather_cube_actual[1]
-        weather_cubes_lon[i] = weather_cube_actual[0]
+        weather_cubes_lat[i] = weather_cube_coords[1]
+        weather_cubes_lon[i] = weather_cube_coords[0]
         weather_cubes_alt[i] = weather_cube_alt
         weather_cubes_data[i] = weather_cube_data
         weather_cubes_time[i] = flt_time[i]
