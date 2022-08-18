@@ -214,151 +214,151 @@ def process_flight_plan(prd, USES_CUR, USES_FORE, fore_start, file):
             heading = gb.heading_a_to_b(flt_lon[i], flt_lat[i], flt_lat[i + 1], flt_lon[i + 1])
 
        # TODO: BRESENHAM
-       # Heading angle -> x:y ratio
-       a, b = int(1000*np.sin(heading)),int(1000*np.cos(heading))
-       cur_x, cur_y = nearest_idx(flt_lon[i], flt_lat[i], prd['lats'], prd['lons'])
+       # Headizng angle -> x:y ratio
+        a, b = int(1000*np.sin(heading)),int(1000*np.cos(heading))
+        cur_x, cur_y = gb.nearest_idx(flt_lon[i], flt_lat[i], prd['lats'], prd['lons'])
 
 
        # TODO:BRESENHAM
        # generate center-axis pts
-       tan_heading = np.tan(heading); tolerance=1e-3
-       axisa, axisb, working_a, working_b = np.zeros((gb.CUBE_SIZE)), np.zeros((gb.CUBE_SIZE)),0,0
-       for idx in range(gb.CUBE_SIZE):
-           cnt = (idx*tan_heading)
-           if np.abs(cnt-np.int(cnt)) > tolerance:
-               working_a += 1
-           else: working_b += 1
-           axisa[idx], axisb[idx] = working_a, working_b
-       axisa, axisb = axisa-(gb.CUBE_SIZE/2) + cur_x, axisb-(gb.CUBE_SIZE/2) + cur_y
+        tan_heading = np.tan(heading); tolerance=1e-3
+        axisa, axisb, working_a, working_b = np.zeros((gb.CUBE_SIZE)), np.zeros((gb.CUBE_SIZE)),0,0
+           for idx in range(gb.CUBE_SIZE):
+               cnt = (idx*tan_heading)
+               if np.abs(cnt-np.int(cnt)) > tolerance:
+                   working_a += 1
+               else: working_b += 1
+               axisa[idx], axisb[idx] = working_a, working_b
+           axisa, axisb = axisa-(gb.CUBE_SIZE/2) + cur_x, axisb-(gb.CUBE_SIZE/2) + cur_y
 
 
-       # TODO: NOT-BRESENHAM
-       # collect axis from center (a:b, -a:-b, b:-a, -b:a)
-       weather_cube_coords = np.zeros((2,gb.CUBE_SIZE,gb.CUBE_SIZE), dtype=float)
-       weather_cube_data = np.zeros((len(gb.LOOKAHEAD_SECONDS),len(prd['products']),prd['cube height'],
-                                      gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
-       weather_cube_alt = np.zeros((prd['cube height']))
+           # TODO: NOT-BRESENHAM
+           # collect axis from center (a:b, -a:-b, b:-a, -b:a)
+           weather_cube_coords = np.zeros((2,gb.CUBE_SIZE,gb.CUBE_SIZE), dtype=float)
+           weather_cube_data = np.zeros((len(gb.LOOKAHEAD_SECONDS),len(prd['products']),prd['cube height'],
+                                          gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
+           weather_cube_alt = np.zeros((prd['cube height']))
 
-       # TODO: NOT-BRESEHNAM
-       # fill axes (a:b, -a:-b)
-       for idx_ in range(gb.CUBE_SIZE):
-           for idx_ortho in range(gb.CUBE_SIZE):
-               if idx_ >= len(prd['lons']) or idx_ortho >= len(prd['lons'][0]): continue
-               else:
-                   weather_cube_coords[0,idx_,idx_ortho] = prd['lats'][axisa[idx_],axisb[idx_ortho]]
-                   weather_cube_coords[1, idx_, idx_ortho] = prd['lons'][axisa[idx_],axisb[idx_ortho]]
-                   weather_cubes_data[:,:,:,idx_,idx_ortho] = relevant_data[:,:,:,axisa[idx_],axisb[idx_ortho]]
-
-
-        # TODO: NOT-BRESENHAM REMOVE
-        '''
-        # Collect and Append Single Cube
-        weather_cube_proj = np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
-        weather_cube_actual = np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
-        weather_cube_alt = np.zeros((prd['cube height']), dtype=float)
-        # Cube Dims (lookahead x products x height x lat x lon) (t,v,z,lat,lon)
-        weather_cube_data = np.zeros((len(gb.LOOKAHEAD_SECONDS),len(prd['products']),prd['cube height'],
-                                      gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
-
-        # Vectorized Cube Data Extraction
-        weather_cube_proj[0] = flt_lon[i] + np.tile(centerline_x, (gb.CUBE_SIZE, 1)) + np.tile(centerline_ortho_x,
-                                                                                            (gb.CUBE_SIZE, 1)).T
-        weather_cube_proj[1] = flt_lat[i] + np.tile(centerline_y, (gb.CUBE_SIZE, 1)) + np.tile(centerline_ortho_y,
-                                                                                            (gb.CUBE_SIZE, 1)).T
-        
-        m.scatter(prd['lons'],prd['lats'],latlon=True)
-        m.scatter(weather_cube_proj[0],weather_cube_proj[1],latlon=True)
-        '''
-
-       weather_cube_alt = prd['alts'][idx_alt-1:idx_alt+2]
+           # TODO: NOT-BRESEHNAM
+           # fill axes (a:b, -a:-b)
+           for idx_ in range(gb.CUBE_SIZE):
+               for idx_ortho in range(gb.CUBE_SIZE):
+                   if idx_ >= len(prd['lons']) or idx_ortho >= len(prd['lons'][0]): continue
+                   else:
+                       weather_cube_coords[0,idx_,idx_ortho] = prd['lats'][axisa[idx_],axisb[idx_ortho]]
+                       weather_cube_coords[1, idx_, idx_ortho] = prd['lons'][axisa[idx_],axisb[idx_ortho]]
+                       weather_cubes_data[:,:,:,idx_,idx_ortho] = relevant_data[:,:,:,axisa[idx_],axisb[idx_ortho]]
 
 
-       '''
-       try:
-            weather_cube_actual, weather_cube_data = fill_cube_utm(weather_cube_proj, relevant_data, prd['UTM'], prd['UTM-latlon idxs'],
-                           prd['lats'],prd['lons'], len(gb.LOOKAHEAD_SECONDS), len(prd['products']),prd['cube height'])
-        except Exception as e:
-            logging.error(f'{file}: {e}')
-            return -1
-        '''
-
-        # Print the max Error between cube points
-        if i % 30 == 0:
-            spread = np.abs(weather_cube_coords.reshape(2,-1).max(1) - weather_cube_coords.reshape(2,-1).min(1))
-            spread_dist = np.sqrt(np.square(spread[0]) + np.square(spread[1]))
-            maxspread = spread_dist.flatten()[spread_dist.argmax()]
-            # logstr = f"{} {}\tMax Distance Err:\t".format(file[-35:-7], datetime.datetime.now()), "{:10.4f}\t".format(maxerr), "\t", str(i + 1), \
-            #          ' / ', len(flight_tr[:, 1] - 1), '\t', file.split('/')[-1]
-            errstr = "{:10.4f}".format(maxspread)
-            logstr = f"{file[-35:-7]} {datetime.datetime.now()}\tMax Distance Err:\t{errstr}\t\t{str(i + 1)} / {len(flight_tr[:, 1] - 1)}\t{file.split('/')[-1]}"
-            logging.info(logstr)
-
-        # Append current cube to list of data
-        weather_cubes_lat[i] = weather_cube_coords[1]
-        weather_cubes_lon[i] = weather_cube_coords[0]
-        weather_cubes_alt[i] = weather_cube_alt
-        weather_cubes_data[i] = weather_cube_data
-        weather_cubes_time[i] = flt_time[i]
-
-    '''
-    # Verification: Plot collected cubes v. actual flight points
-    m.scatter(weather_cubes_lon, weather_cubes_lat, marker=',', color='blue', latlon=True)
-    m.scatter(flight_tr[:, 2], flight_tr[:, 1], marker=',', color='red', latlon=True)
-    plt.show(block=False)
-    PATH_FIGURE_PROJECTION = gb.PATH_PROJECT + '/Output/Weather Cubes/Plots/' \
-                             + flt_startdate.isoformat().replace(':', '_') + '.' + gb.FIGURE_FORMAT
-    plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)
-    plt.close()
-    '''
-
-    # write to NetCDF
-    file_local = file.split('/')[-1]
-    PATH_NC_FILENAME = prd['output path'] + flt_startdate.isoformat()[:10] + '/' + file_local.split('.')[0] + '.nc'
-    logging.info(f'WRITING TO:\t{PATH_NC_FILENAME}')
-    if not os.listdir(prd['output path']).__contains__(flt_startdate.isoformat()[:10]):
-        os.mkdir(prd['output path'] + flt_startdate.isoformat()[:10])
-    cubes_rootgrp = Dataset(PATH_NC_FILENAME, 'w', type='NetCDF4')
-
-    # Add Dimensions
-    cubes_rootgrp.createDimension('time', size=None)
-    cubes_rootgrp.createDimension('lookahead',size=len(gb.LOOKAHEAD_SECONDS))
-    cubes_rootgrp.createDimension('XPoints', size=gb.CUBE_SIZE)
-    cubes_rootgrp.createDimension('YPoints', size=gb.CUBE_SIZE)
-    cubes_rootgrp.createDimension('ZPoints',size=prd['cube height'])
-
-    # Add Variables
-    cubes_rootgrp.createVariable('time', datatype=float, dimensions=('time'))
-    cubes_rootgrp.variables['time'].units = 'Seconds since 1970-01-01T00:00:00'
-    cubes_rootgrp.variables['time'].calendar = 'gregorian'
-    cubes_rootgrp.createVariable('lookahead',datatype=float,dimensions=('lookahead'))
-    cubes_rootgrp.variables['lookahead'].units = 'Seconds ahead of current time'
-    cubes_rootgrp.createVariable('XPoints', datatype=float, dimensions=('XPoints'))
-    cubes_rootgrp.variables['XPoints'].units = 'indexing for each weather cube'
-    cubes_rootgrp.createVariable('YPoints', datatype=float, dimensions=('YPoints'))
-    cubes_rootgrp.variables['YPoints'].units = 'indexing for each weather cube'
-    # cubes_rootgrp.createVariable('latitude', datatype=float, dimensions=('time', 'XPoints', 'YPoints'))
-    # cubes_rootgrp.createVariable('longitude', datatype=float, dimensions=('time', 'XPoints', 'YPoints'))
-    # cubes_rootgrp.createVariable('altitudes', datatype=float, dimensions=('time','ZPoints'))
-    for prod in prd['products']:
-        cubes_rootgrp.createVariable(prod, datatype=float, dimensions=('time', 'lookahead', 'ZPoints', 'XPoints', 'YPoints'))
-
-
-    # Add Metadata: Flight Callsign, Earth-radius,
-    cubes_rootgrp.Callsign = file.split('_')[-1].split('.')[0]
-    cubes_rootgrp.rEarth = gb.R_EARTH
-
-    # Assign Weather Cube Data to netCDF Variables
-    cubes_rootgrp.variables['XPoints'][:] = np.arange(0, gb.CUBE_SIZE, 1)
-    cubes_rootgrp.variables['YPoints'][:] = np.arange(0, gb.CUBE_SIZE, 1)
-    cubes_rootgrp.variables['time'][:] = weather_cubes_time
-    # cubes_rootgrp.variables['latitude'][:] = weather_cubes_lat
-    # cubes_rootgrp.variables['longitude'][:] = weather_cubes_lon
-    for p in range(len(prd['products'])):
-        cubes_rootgrp.variables[prd['products'][p]][:] = weather_cubes_data[:,:,p,:,:,:]
+            # TODO: NOT-BRESENHAM REMOVE
+            '''
+            # Collect and Append Single Cube
+            weather_cube_proj = np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
+            weather_cube_actual = np.zeros((2, gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
+            weather_cube_alt = np.zeros((prd['cube height']), dtype=float)
+            # Cube Dims (lookahead x products x height x lat x lon) (t,v,z,lat,lon)
+            weather_cube_data = np.zeros((len(gb.LOOKAHEAD_SECONDS),len(prd['products']),prd['cube height'],
+                                          gb.CUBE_SIZE, gb.CUBE_SIZE), dtype=float)
     
-    cubes_rootgrp.close()
-    logging.info(f'COMPLETED:\t{PATH_NC_FILENAME}')
-    return 0
+            # Vectorized Cube Data Extraction
+            weather_cube_proj[0] = flt_lon[i] + np.tile(centerline_x, (gb.CUBE_SIZE, 1)) + np.tile(centerline_ortho_x,
+                                                                                                (gb.CUBE_SIZE, 1)).T
+            weather_cube_proj[1] = flt_lat[i] + np.tile(centerline_y, (gb.CUBE_SIZE, 1)) + np.tile(centerline_ortho_y,
+                                                                                                (gb.CUBE_SIZE, 1)).T
+            
+            m.scatter(prd['lons'],prd['lats'],latlon=True)
+            m.scatter(weather_cube_proj[0],weather_cube_proj[1],latlon=True)
+            '''
+
+           weather_cube_alt = prd['alts'][idx_alt-1:idx_alt+2]
+
+
+           '''
+           try:
+                weather_cube_actual, weather_cube_data = fill_cube_utm(weather_cube_proj, relevant_data, prd['UTM'], prd['UTM-latlon idxs'],
+                               prd['lats'],prd['lons'], len(gb.LOOKAHEAD_SECONDS), len(prd['products']),prd['cube height'])
+            except Exception as e:
+                logging.error(f'{file}: {e}')
+                return -1
+            '''
+
+            # Print the max Error between cube points
+            if i % 30 == 0:
+                spread = np.abs(weather_cube_coords.reshape(2,-1).max(1) - weather_cube_coords.reshape(2,-1).min(1))
+                spread_dist = np.sqrt(np.square(spread[0]) + np.square(spread[1]))
+                maxspread = spread_dist.flatten()[spread_dist.argmax()]
+                # logstr = f"{} {}\tMax Distance Err:\t".format(file[-35:-7], datetime.datetime.now()), "{:10.4f}\t".format(maxerr), "\t", str(i + 1), \
+                #          ' / ', len(flight_tr[:, 1] - 1), '\t', file.split('/')[-1]
+                errstr = "{:10.4f}".format(maxspread)
+                logstr = f"{file[-35:-7]} {datetime.datetime.now()}\tMax Distance Err:\t{errstr}\t\t{str(i + 1)} / {len(flight_tr[:, 1] - 1)}\t{file.split('/')[-1]}"
+                logging.info(logstr)
+
+            # Append current cube to list of data
+            weather_cubes_lat[i] = weather_cube_coords[1]
+            weather_cubes_lon[i] = weather_cube_coords[0]
+            weather_cubes_alt[i] = weather_cube_alt
+            weather_cubes_data[i] = weather_cube_data
+            weather_cubes_time[i] = flt_time[i]
+
+        '''
+        # Verification: Plot collected cubes v. actual flight points
+        m.scatter(weather_cubes_lon, weather_cubes_lat, marker=',', color='blue', latlon=True)
+        m.scatter(flight_tr[:, 2], flight_tr[:, 1], marker=',', color='red', latlon=True)
+        plt.show(block=False)
+        PATH_FIGURE_PROJECTION = gb.PATH_PROJECT + '/Output/Weather Cubes/Plots/' \
+                                 + flt_startdate.isoformat().replace(':', '_') + '.' + gb.FIGURE_FORMAT
+        plt.savefig(PATH_FIGURE_PROJECTION, format=gb.FIGURE_FORMAT)
+        plt.close()
+        '''
+
+        # write to NetCDF
+        file_local = file.split('/')[-1]
+        PATH_NC_FILENAME = prd['output path'] + flt_startdate.isoformat()[:10] + '/' + file_local.split('.')[0] + '.nc'
+        logging.info(f'WRITING TO:\t{PATH_NC_FILENAME}')
+        if not os.listdir(prd['output path']).__contains__(flt_startdate.isoformat()[:10]):
+            os.mkdir(prd['output path'] + flt_startdate.isoformat()[:10])
+        cubes_rootgrp = Dataset(PATH_NC_FILENAME, 'w', type='NetCDF4')
+
+        # Add Dimensions
+        cubes_rootgrp.createDimension('time', size=None)
+        cubes_rootgrp.createDimension('lookahead',size=len(gb.LOOKAHEAD_SECONDS))
+        cubes_rootgrp.createDimension('XPoints', size=gb.CUBE_SIZE)
+        cubes_rootgrp.createDimension('YPoints', size=gb.CUBE_SIZE)
+        cubes_rootgrp.createDimension('ZPoints',size=prd['cube height'])
+
+        # Add Variables
+        cubes_rootgrp.createVariable('time', datatype=float, dimensions=('time'))
+        cubes_rootgrp.variables['time'].units = 'Seconds since 1970-01-01T00:00:00'
+        cubes_rootgrp.variables['time'].calendar = 'gregorian'
+        cubes_rootgrp.createVariable('lookahead',datatype=float,dimensions=('lookahead'))
+        cubes_rootgrp.variables['lookahead'].units = 'Seconds ahead of current time'
+        cubes_rootgrp.createVariable('XPoints', datatype=float, dimensions=('XPoints'))
+        cubes_rootgrp.variables['XPoints'].units = 'indexing for each weather cube'
+        cubes_rootgrp.createVariable('YPoints', datatype=float, dimensions=('YPoints'))
+        cubes_rootgrp.variables['YPoints'].units = 'indexing for each weather cube'
+        # cubes_rootgrp.createVariable('latitude', datatype=float, dimensions=('time', 'XPoints', 'YPoints'))
+        # cubes_rootgrp.createVariable('longitude', datatype=float, dimensions=('time', 'XPoints', 'YPoints'))
+        # cubes_rootgrp.createVariable('altitudes', datatype=float, dimensions=('time','ZPoints'))
+        for prod in prd['products']:
+            cubes_rootgrp.createVariable(prod, datatype=float, dimensions=('time', 'lookahead', 'ZPoints', 'XPoints', 'YPoints'))
+
+
+        # Add Metadata: Flight Callsign, Earth-radius,
+        cubes_rootgrp.Callsign = file.split('_')[-1].split('.')[0]
+        cubes_rootgrp.rEarth = gb.R_EARTH
+
+        # Assign Weather Cube Data to netCDF Variables
+        cubes_rootgrp.variables['XPoints'][:] = np.arange(0, gb.CUBE_SIZE, 1)
+        cubes_rootgrp.variables['YPoints'][:] = np.arange(0, gb.CUBE_SIZE, 1)
+        cubes_rootgrp.variables['time'][:] = weather_cubes_time
+        # cubes_rootgrp.variables['latitude'][:] = weather_cubes_lat
+        # cubes_rootgrp.variables['longitude'][:] = weather_cubes_lon
+        for p in range(len(prd['products'])):
+            cubes_rootgrp.variables[prd['products'][p]][:] = weather_cubes_data[:,:,p,:,:,:]
+
+        cubes_rootgrp.close()
+        logging.info(f'COMPLETED:\t{PATH_NC_FILENAME}')
+        return 0
 
 
 def main():
@@ -368,21 +368,22 @@ def main():
     global_outpath = '/media/dualboot/New Volume/NathanSchimpf/PyCharmProjects/Weather-Preprocessing/Output/Weather Cubes'
 
     et_sample = Dataset('Data/EchoTop/Sorted/2018-11-01/Current/ECHO_TOP.2018-11-01T000000Z.nc', 'r', format='NETCDF4')
-    #vil_sample = Dataset('Data/VIL/Sorted/2019-01-10/Current/VIL.2019-01-10T000000Z.nc','r',format='NETCDF4')
-    #hrrr_sample = Dataset('Data/HRRR/Sorted/2019-01-10/Current/hrrr.2019-01-10T000000Z.wrfprsf00.nc')
+    # vil_sample = Dataset('Data/VIL/Sorted/2019-01-10/Current/VIL.2019-01-10T000000Z.nc','r',format='NETCDF4')
+    # hrrr_sample = Dataset('Data/HRRR/Sorted/2019-01-10/Current/hrrr.2019-01-10T000000Z.wrfprsf00.nc')
     ciws_lats, ciws_lons = np.array(et_sample['lats'][:]), np.array(et_sample['lons'][:])
     ciws_utmdict, ciws_traceback, df_ciws_verif = gb.longrange_latlon_to_utm(ciws_lats, ciws_lons)
     df_ciws_verif.to_csv(gb.PATH_PROJECT + '/Output/Weather Cubes/CIWS_UTM.csv')
-    #hrrr_lats, hrrr_lons = np.array(hrrr_sample['lats'][:]), np.array(hrrr_sample['lons'][:])
-    #hrrr_utmdict, hrrr_traceback, df_hrrr_verif = gb.longrange_latlon_to_utm(hrrr_lats, hrrr_lons)
-    #df_hrrr_verif.to_csv(gb.PATH_PROJECT + '/Output/Weather Cubes/HRRR_UTM.csv')
+    # hrrr_lats, hrrr_lons = np.array(hrrr_sample['lats'][:]), np.array(hrrr_sample['lons'][:])
+    # hrrr_utmdict, hrrr_traceback, df_hrrr_verif = gb.longrange_latlon_to_utm(hrrr_lats, hrrr_lons)
+    # df_hrrr_verif.to_csv(gb.PATH_PROJECT + '/Output/Weather Cubes/HRRR_UTM.csv')
 
     prd_et = {'products': ['ECHO_TOP'], 'cube height': 1, 'lats': ciws_lats, 'lons': ciws_lons,
               'UTM': ciws_utmdict, 'UTM-latlon idxs': ciws_traceback,
               'alts': np.array(et_sample['alt'][:]), 'sorted path': gb.PATH_PROJECT + '/Data/EchoTop/Sorted/',
-              'output path': f'{global_outpath}/ECHO_TOP/'.replace('/',os.sep), 'refresh rate': 150,'spatial res': 1850,
+              'output path': f'{global_outpath}/ECHO_TOP/'.replace('/', os.sep), 'refresh rate': 150,
+              'spatial res': 1850,
               'log path': gb.PATH_PROJECT + '/Output/Weather Cubes/ECHO_TOP_Cube_Gen.log'}
-# gb.PATH_PROJECT + '/Output/Weather Cubes/ECHO_TOP/'
+    # gb.PATH_PROJECT + '/Output/Weather Cubes/ECHO_TOP/'
     # prd_vil = {'products': ['VIL'], 'cube height': 1, 'lats': ciws_lats, 'lons': ciws_lons,
     #            'UTM': ciws_utmdict, 'UTM-latlon idxs': ciws_traceback,
     #            'alts': np.array(vil_sample['alt'][:]), 'sorted path': gb.PATH_PROJECT + '/Data/VIL/Sorted/',
@@ -395,7 +396,7 @@ def main():
     #             'output path': f'{global_outpath}/HRRR/'.replace('/',os.sep), 'refresh rate': 3600, 'spatial res': 3000,
     #             'log path': gb.PATH_PROJECT + '/Output/Weather Cubes/HRRR_Cube_Gen.log'}
 
-    et_sample.close(); #vil_sample.close(); hrrr_sample.close();
+    et_sample.close();  # vil_sample.close(); hrrr_sample.close();
 
     fmode = 'w'
     if os.path.isfile(prd_et['log path']):
@@ -443,8 +444,8 @@ def main():
         logging.info('done: ' + edtime.isoformat())
         logging.info('execution time:' + str(duration.total_seconds()) + ' s')
         print('Execution complete. Check {} for details'.format(product['log path']))
-        #cont = input("Completed {}: Continue? y/n".format(', '.join(product['products'])))
-        #if cont.lower() == 'n':
+        # cont = input("Completed {}: Continue? y/n".format(', '.join(product['products'])))
+        # if cont.lower() == 'n':
         #    break
 
         os.chdir(gb.PATH_PROJECT)

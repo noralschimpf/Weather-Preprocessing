@@ -154,6 +154,21 @@ def heading_a_to_b(a_lon, a_lat, b_lon, b_lat, spherical=True):
         heading = (90 - theta * 180 / math.pi) % 360
     return heading
 
+def nearest_idx(cur_lat, cur_lon, lats, lons):
+    '''
+    returns the x,y indices of the point closest matching the listed lat/lon coordinates from a gridded dataset
+    :param cur_lat:
+    :param cur_lon:
+    :param lats:
+    :param lons:
+    :return:
+    '''
+    dists = km_between_coords(lats=np.concatenate((cur_lat, lats.reshape(-1))),
+                              lons=np.concatenate((cur_lon, lons.reshape(-1))))
+
+    dists.reshape(lats.shape)
+    return np.where(dists == dists.min())[0]
+
 
 @jit(nopython=True)
 def haversine(lat2: float, lat1: np.array, delta_lons: np.array, rEarth: int = R_EARTH):
